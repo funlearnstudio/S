@@ -1,0 +1,2 @@
+name = ask "What is your name"
+say "Hello " + name

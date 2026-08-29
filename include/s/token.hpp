@@ -1,0 +1,28 @@
+#pragma once
+
+#include <string>
+#include <string_view>
+
+namespace s {
+
+struct SourcePos { int line = 1; int column = 1; };
+
+enum class TokenKind {
+  End, Newline, Indent, Dedent,
+  Identifier, Integer, Number, String,
+  True, False, Say, Ask, If, Else, Repeat, For, In, While, Make, Give,
+  And, Or, Not,
+  Plus, Minus, Star, Slash, Percent, Power,
+  Equal, EqualEqual, BangEqual, Greater, Less, GreaterEqual, LessEqual,
+  LeftParen, RightParen, LeftBracket, RightBracket, Comma, Dot, Range
+};
+
+struct Token {
+  TokenKind kind;
+  std::string text;
+  SourcePos pos;
+};
+
+std::string_view token_name(TokenKind kind);
+
+} // namespace s
