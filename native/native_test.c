@@ -1,3 +1,4 @@
+#include "s/native.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -6,6 +7,8 @@ double s_test_square(double x){return x*x;}
 int s_test_not(int value){return value?0:1;}
 const char* s_test_echo(const char* text){return text;}
 int s_test_fail(int value){(void)value;return -1;}
+SBytesView s_test_bytes_echo(SBytesView bytes){return bytes;}
+int s_test_bytes_len(SBytesView bytes){return (int)bytes.size;}
 
 static int live_counters=0;
 typedef struct STestCounter { int value; } STestCounter;
