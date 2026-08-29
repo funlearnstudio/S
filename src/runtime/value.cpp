@@ -14,7 +14,7 @@ std::string Value::type_name() const {
     case 0:return "None";case 1:return "Int";case 2:return "Num";case 3:return "Bool";case 4:return "Text";
     case 5:return "Duration";case 6:return "Time";case 7:return "Path";case 8:return "Error";case 9:return "List";
     case 10:return "Map";case 11:return "Set";case 12:return "Function";case 13:return "Object";case 14:return "Type";
-    case 15:return "Module";case 16:return "File";case 17:return "NativeHandle";default:return "Value";
+    case 15:return "Module";case 16:return "File";case 17:return "NativeHandle";case 18:return "Bytes";default:return "Value";
   }
 }
 
@@ -43,6 +43,7 @@ std::string Value::text() const {
   if(auto x=std::get_if<std::shared_ptr<ModuleData>>(&data_))return "<module "+(*x)->name+">";
   if(auto x=std::get_if<std::shared_ptr<FileData>>(&data_))return "<file "+(*x)->path.string()+">";
   if(auto x=std::get_if<std::shared_ptr<NativeHandleData>>(&data_))return "<native "+(*x)->tag+">";
+  if(auto x=std::get_if<std::shared_ptr<ByteBufferData>>(&data_))return "<bytes "+std::to_string((*x)->bytes.size())+">";
   return "value";
 }
 
@@ -81,6 +82,7 @@ bool value_equal(const Value&a,const Value&b){
   if(auto x=std::get_if<PathData>(&a.data()))return x->path==std::get<PathData>(b.data()).path;
   if(auto x=std::get_if<std::shared_ptr<ObjectData>>(&a.data()))return *x==std::get<std::shared_ptr<ObjectData>>(b.data());
   if(auto x=std::get_if<std::shared_ptr<NativeHandleData>>(&a.data()))return (*x)->resource==std::get<std::shared_ptr<NativeHandleData>>(b.data())->resource;
+  if(auto x=std::get_if<std::shared_ptr<ByteBufferData>>(&a.data()))return (*x)->bytes==std::get<std::shared_ptr<ByteBufferData>>(b.data())->bytes;
   return a.text()==b.text();
 }
 
