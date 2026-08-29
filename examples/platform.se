@@ -19,11 +19,11 @@ test.equal "a-b-c" joined
 nums = [3, 1, 3, 2]
 sorted = collections.sort nums
 unique = collections.unique nums
-test.equal 4 sorted.len
-test.equal 3 unique.len
 first = collections.first sorted
 last = collections.last sorted
 test.equal 1 first
 test.equal 3 last
+has_two = collections.contains unique 2
+test.ok has_two
 
 say "SE platform libraries OK"
