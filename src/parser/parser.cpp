@@ -153,14 +153,22 @@ ast::ExprPtr Parser::prefix(){
 }
 
 ast::ExprPtr Parser::postfix(ast::ExprPtr value){
-  while(true){
-    if(match(TokenKind::LeftBracket)){ auto i=expression(); take(TokenKind::RightBracket,"Close this index with ']'."); value=std::make_shared<ast::Index>(value->pos,value,i); continue; }
-    if(match(TokenKind::Dot)){ auto n=take(TokenKind::Identifier,"Write a member name after '.'."); value=std::make_shared<ast::Member>(value->pos,value,n.text); continue; }
-    break;
-  }
+  auto attach_members=[&](ast::ExprPtr arg){
+    while(true){
+      if(match(TokenKind::LeftBracket)){auto i=expression();take(TokenKind::RightBracket,"Close this index with ']'.");arg=std::make_shared<ast::Index>(arg->pos,arg,i);continue;}
+      if(match(TokenKind::Dot)){auto n=take(TokenKind::Identifier,"Write a member name after '.'.");arg=std::make_shared<ast::Member>(arg->pos,arg,n.text);continue;}
+      break;
+    }
+    return arg;
+  };
+
+  value=attach_members(value);
   if((std::dynamic_pointer_cast<ast::Variable>(value)||std::dynamic_pointer_cast<ast::Member>(value)) && expression_start(peek().kind)){
     std::vector<ast::ExprPtr> args;
-    while(expression_start(peek().kind)){ auto arg=postfix(prefix()); args.push_back(arg); }
+    while(expression_start(peek().kind)){
+      auto arg=attach_members(prefix());
+      args.push_back(arg);
+    }
     value=std::make_shared<ast::Call>(value->pos,value,std::move(args));
   }
   return value;

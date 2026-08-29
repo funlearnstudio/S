@@ -19,6 +19,7 @@ public:
   Interpreter(std::istream& in,std::ostream& out);
   void run(const ast::Program&); Value evaluate(const ast::ExprPtr&);
   std::shared_ptr<Environment> environment() const{return env_;}
+  Value invoke(Value callable,const std::vector<Value>& args,SourcePos pos){return call(std::move(callable),args,pos);}
 private:
   std::istream& in_; std::ostream& out_; std::shared_ptr<Environment> env_; int loop_steps_=0;
   std::unordered_map<std::string,std::shared_ptr<ModuleData>> modules_;
