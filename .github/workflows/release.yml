@@ -1,0 +1,41 @@
+name: S Release
+
+on:
+  workflow_run:
+    workflows: ["S CI"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  release-0-2-0:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: v0.2.0
+    steps:
+      - name: Checkout validated main commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Verify release version
+        run: |
+          grep -F 'project(S VERSION 0.2.0 ' CMakeLists.txt
+          grep -F 'S 0.2.0' RELEASE_NOTES.md
+
+      - name: Create S 0.2.0 release
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "$TAG already exists"
+            exit 0
+          fi
+          gh release create "$TAG" \
+            --target "${{ github.event.workflow_run.head_sha }}" \
+            --title "S 0.2.0" \
+            --notes-file RELEASE_NOTES.md
