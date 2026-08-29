@@ -27,6 +27,7 @@ else()
 endif()
 
 add_library(native_test SHARED native/native_test.c)
+target_include_directories(native_test PRIVATE include)
 set_target_properties(native_test PROPERTIES OUTPUT_NAME native_test)
 if(MSVC)
   target_compile_options(native_test PRIVATE /W4 /WX)
