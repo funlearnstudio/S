@@ -13,7 +13,7 @@ web.get "/hello/:name" greet
 result = web.handle "GET" "/hello/SE" "request"
 status = web.handle_status "GET" "/hello/SE" "request"
 
-test.equal status 200
+test.equal 200 status
 not_empty = result != ""
 test.ok not_empty
 say result
