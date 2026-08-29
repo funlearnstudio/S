@@ -16,10 +16,7 @@ struct Stmt { explicit Stmt(SourcePos p) : pos(p) {} virtual ~Stmt()=default; So
 using StmtPtr = std::shared_ptr<Stmt>;
 using Block = std::vector<StmtPtr>;
 
-struct Literal final : Expr {
-  using Data=std::variant<std::int64_t,double,std::string,bool>;
-  Literal(SourcePos p,Data v):Expr(p),value(std::move(v)){} Data value;
-};
+struct Literal final : Expr { using Data=std::variant<std::int64_t,double,std::string,bool>; Literal(SourcePos p,Data v):Expr(p),value(std::move(v)){} Data value; };
 struct Duration final : Expr { Duration(SourcePos p,std::int64_t ms):Expr(p),milliseconds(ms){} std::int64_t milliseconds; };
 struct Variable final : Expr { Variable(SourcePos p,std::string n):Expr(p),name(std::move(n)){} std::string name; };
 struct Binary final : Expr { Binary(SourcePos p,ExprPtr l,TokenKind o,ExprPtr r):Expr(p),left(std::move(l)),op(o),right(std::move(r)){} ExprPtr left; TokenKind op; ExprPtr right; };
@@ -49,6 +46,14 @@ struct Use final : Stmt { Use(SourcePos p,std::string n):Stmt(p),name(std::move(
 struct Try final : Stmt { Try(SourcePos p,Block b,std::string n,Block e):Stmt(p),body(std::move(b)),error_name(std::move(n)),else_block(std::move(e)){} Block body; std::string error_name; Block else_block; };
 struct Fail final : Stmt { Fail(SourcePos p,ExprPtr v):Stmt(p),value(std::move(v)){} ExprPtr value; };
 
+struct NativeFunction {
+  std::string name;
+  std::string symbol;
+  std::vector<std::string> args;
+  std::string result;
+  std::string cleanup;
+  bool fallible=false;
+};
 struct Module {
   std::string name;
   std::string path;
@@ -56,6 +61,8 @@ struct Module {
   std::vector<std::string> imports;
   bool builtin=false;
   bool native=false;
+  std::string native_library;
+  std::vector<NativeFunction> native_functions;
 };
 struct Program { Block statements; std::vector<Module> modules; std::string entry; };
 
