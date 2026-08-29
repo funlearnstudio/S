@@ -74,7 +74,7 @@ void Interpreter::install_builtins(const std::shared_ptr<Environment>&e){
 }
 
 std::shared_ptr<ModuleData> Interpreter::builtin_module(const std::string&name){
-  if(is_platform_builtin(name))return platform_builtin_module(name,*this);
+  if(combined_platform_builtin(name))return combined_platform_builtin_module(name,*this);
   auto m=std::make_shared<ModuleData>();m->name=name;
   if(name=="path"){
     m->exports["join"]=callable("path.join",1,64,[](const std::vector<Value>&a,SourcePos p){std::filesystem::path r;for(auto&v:a)r/=path_text(v,p);return Value(PathData{r});},true);
@@ -135,7 +135,7 @@ void Interpreter::execute(const ast::StmtPtr& s){
 
 std::shared_ptr<ModuleData> Interpreter::run_module(const ast::Module&m){
   if(m.builtin)return builtin_module(m.name);if(m.native)return load_native_module(m);auto old=env_;auto old_source=source_;auto local=std::make_shared<Environment>();env_=local;source_=m.path;install_builtins(local);
-  for(auto&s:m.statements)if(auto u=std::dynamic_pointer_cast<ast::Use>(s)){auto d=modules_.find(u->name);if(d==modules_.end())throw Error(u->pos,"Module '"+u->name+"' was not loaded.");if(u->name=="file"||u->name=="path"||u->name=="time"||u->name=="math"||u->name=="random"||u->name=="os"||is_platform_builtin(u->name))local->define(u->name,d->second);else for(auto&[n,v]:d->second->exports){if(local->has(n))throw Error(u->pos,"The name '"+n+"' is provided by more than one module.");local->define(n,v);}}
+  for(auto&s:m.statements)if(auto u=std::dynamic_pointer_cast<ast::Use>(s)){auto d=modules_.find(u->name);if(d==modules_.end())throw Error(u->pos,"Module '"+u->name+"' was not loaded.");if(u->name=="file"||u->name=="path"||u->name=="time"||u->name=="math"||u->name=="random"||u->name=="os"||combined_platform_builtin(u->name))local->define(u->name,d->second);else for(auto&[n,v]:d->second->exports){if(local->has(n))throw Error(u->pos,"The name '"+n+"' is provided by more than one module.");local->define(n,v);}}
   try{for(auto&s:m.statements)execute(s);}catch(...){env_=old;source_=old_source;throw;}auto out=std::make_shared<ModuleData>();out->name=m.name;for(auto&s:m.statements){std::string n;if(auto t=std::dynamic_pointer_cast<ast::Type>(s))n=t->name;else if(auto f=std::dynamic_pointer_cast<ast::Function>(s))n=f->name;else if(auto a=std::dynamic_pointer_cast<ast::Assign>(s))if(auto v=std::dynamic_pointer_cast<ast::Variable>(a->target))n=v->name;if(!n.empty()&&n[0]!='_')out->exports[n]=local->get(n,s->pos);}env_=old;source_=old_source;return out;
 }
 
