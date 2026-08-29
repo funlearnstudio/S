@@ -55,13 +55,13 @@ void print_help(){
     "  se doctor                      Show local toolchain diagnostics\n"
     "  se help                        Show this help\n"
     "  se --version                   Show the SE version\n\n"
-    "Built-in platform modules: json, text, collections, test, process, http, web, js, ts.\n"
+    "Built-in modules include json, text, collections, function, async, option, result, db, https, test, process, http, web, js and ts.\n"
     "Source files use .se. Legacy .s files are still accepted during migration.\n";
 }
 
 int doctor_command(){
   std::cout<<"SE doctor\n";
-  std::cout<<"  version: SE 0.5.0-dev\n";
+  std::cout<<"  version: SE 0.6.0-dev\n";
 #ifdef _WIN32
   std::cout<<"  platform: Windows\n";
 #elif __APPLE__
@@ -78,6 +78,7 @@ int doctor_command(){
   else std::cout<<"  package home: default search paths\n";
   std::cout<<"  Node bridge: requires node on PATH for use js\n";
   std::cout<<"  TypeScript bridge: requires ts-node/tsc on PATH for use ts\n";
+  std::cout<<"  HTTPS bridge: requires curl on PATH for use https\n";
   std::cout<<"  current directory: "<<std::filesystem::current_path().string()<<"\n";
   std::cout<<"Doctor finished. Use 'se check file.se' or 'se check-all .' for source diagnostics.\n";
   return 0;
@@ -188,7 +189,7 @@ int new_project(const std::string&kind,const std::filesystem::path&root){
       "async function load(): Promise<void> {\n  const value: unknown = await seGet('/api/hello/typescript');\n  if (output) output.textContent = JSON.stringify(value, null, 2);\n}\n"
       "void load();\n");
     write_new_file(root/"README.md",
-      "# "+root.filename().string()+"\n\nSE 0.5 web project with a real SE HTTP API backend and browser bridge.\n\n- `backend/main.se` - SE HTTP server/router\n- `backend/tests/` - in-memory route tests\n- `frontend/index.html` / `style.css` - browser UI\n- `frontend/se-api.js` - JavaScript fetch bridge\n- `frontend/se-api.ts` - typed TypeScript fetch bridge\n\nRun backend:\n\n```sh\nse check-all backend\nse test backend\nse run backend/main.se\n```\n\nThen serve `frontend/` with any static web server and open it in a browser. The SE server listens on port 8080.\n\nThe current built-in server is synchronous and intended for development/small services; the HTTP client currently supports plain `http://`, not TLS/HTTPS.\n");
+      "# "+root.filename().string()+"\n\nSE 0.6 web project with a real SE HTTP API backend and browser bridge.\n\n- `backend/main.se` - SE HTTP server/router\n- `backend/tests/` - in-memory route tests\n- `frontend/index.html` / `style.css` - browser UI\n- `frontend/se-api.js` - JavaScript fetch bridge\n- `frontend/se-api.ts` - typed TypeScript fetch bridge\n\nRun backend:\n\n```sh\nse check-all backend\nse test backend\nse run backend/main.se\n```\n\nThen serve `frontend/` with any static web server and open it in a browser. The SE server listens on port 8080.\n\nThe built-in server is synchronous and intended for development/small services. Use `https` for TLS client requests; it currently relies on system curl.\n");
     std::cout<<"Created SE web project at "<<root.string()<<"\n";
     std::cout<<"Run: cd "<<root.string()<<" && se test backend && se run backend/main.se\n";
     return 0;
@@ -206,7 +207,7 @@ int file_command(const std::string&cmd,const std::filesystem::path&path){
 #else
     std::filesystem::path root=std::filesystem::current_path();
 #endif
-    std::string command=compiler+" -std=c++20 -O2 -Wall -Wextra -Wpedantic -Werror -Wno-misleading-indentation -I"+shell_quote((root/"include").string())+" "+shell_quote(cpp_path.string())+" "+shell_quote((root/"src/runtime/error.cpp").string())+" "+shell_quote((root/"src/runtime/value.cpp").string())+" "+shell_quote((root/"src/runtime/platform.cpp").string())+" "+shell_quote((root/"src/interpreter/interpreter.cpp").string())+" "+shell_quote((root/"src/ffi/ffi.cpp").string())+" -pthread";
+    std::string command=compiler+" -std=c++20 -O2 -Wall -Wextra -Wpedantic -Werror -Wno-misleading-indentation -DS_PLATFORM_IMPL -I"+shell_quote((root/"include").string())+" "+shell_quote(cpp_path.string())+" "+shell_quote((root/"src/runtime/error.cpp").string())+" "+shell_quote((root/"src/runtime/value.cpp").string())+" "+shell_quote((root/"src/runtime/platform.cpp").string())+" "+shell_quote((root/"src/runtime/advanced.cpp").string())+" "+shell_quote((root/"src/interpreter/interpreter.cpp").string())+" "+shell_quote((root/"src/ffi/ffi.cpp").string())+" -pthread";
 #ifdef __linux__
     command+=" -ldl";
 #endif
@@ -223,16 +224,16 @@ int bind_command(const std::filesystem::path&definition,const std::filesystem::p
   }catch(const s::Error&e){std::string source;try{source=read_file(definition);}catch(...){ }std::cerr<<s::format_error(e,source);return 1;}
 }
 void repl(){
-  std::cout<<"SE 0.5.0-dev\nType SE code. Use a blank line to finish a block. Ctrl-D exits.\n";
+  std::cout<<"SE 0.6.0-dev\nType SE code. Use a blank line to finish a block. Ctrl-D exits.\n";
   std::string pending,line; s::Checker checker; s::Interpreter vm(std::cin,std::cout);
   auto execute=[&]{if(pending.empty())return;try{s::Lexer lexer(pending);s::Parser parser(lexer.scan());auto program=parser.parse();checker.check(program);vm.run(program);}catch(const s::Error&e){std::cerr<<s::format_error(e,pending);}catch(const s::RuntimeFailure&e){std::cerr<<e.what()<<'\n';}pending.clear();};
-  while(true){std::cout<<(pending.empty()?"> ":". ");if(!std::getline(std::cin,line)){execute();break;}if(line.empty()&&!pending.empty()){execute();continue;}pending+=line+'\n';if(line.find_first_not_of(' ')==0&&line.rfind("if ",0)!=0&&line.rfind("for ",0)!=0&&line.rfind("while ",0)!=0&&line.rfind("repeat ",0)!=0&&line.rfind("make ",0)!=0&&line.rfind("type ",0)!=0&&line!="try")execute();}
+  while(true){std::cout<<(pending.empty()?"> ":". ");if(!std::getline(std::cin,line)){execute();break;}if(line.empty()&&!pending.empty()){execute();continue;}pending+=line+'\n';if(line.find_first_not_of(' ')==0&&line.rfind("if ",0)!=0&&line.rfind("for ",0)!=0&&line.rfind("while ",0)!=0&&line.rfind("repeat ",0)!=0&&line.rfind("make ",0)!=0&&line.rfind("type ",0)!=0&&line.rfind("match ",0)!=0&&line!="try")execute();}
 }
 }
 int main(int argc,char**argv){
   try{
     if(argc==1){repl();return 0;}
-    if(argc==2&&std::string(argv[1])=="--version"){std::cout<<"SE 0.5.0-dev\n";return 0;}
+    if(argc==2&&std::string(argv[1])=="--version"){std::cout<<"SE 0.6.0-dev\n";return 0;}
     if(argc==2&&(std::string(argv[1])=="help"||std::string(argv[1])=="--help"||std::string(argv[1])=="-h")){print_help();return 0;}
     if(argc==2&&std::string(argv[1])=="doctor")return doctor_command();
     if((argc==2||argc==3)&&std::string(argv[1])=="check-all")return check_all_command(argc==3?std::filesystem::path(argv[2]):std::filesystem::path("."));
