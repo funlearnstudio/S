@@ -1,0 +1,7 @@
+value = 2 + 2
+if value != 4
+    fail "2 + 2 should be 4"
+
+name = "SE"
+if name.upper != "SE"
+    fail "Text.upper should work"
