@@ -18,6 +18,7 @@ if(MSVC)
   target_compile_options(s_core PRIVATE /W4 /WX /permissive- /wd4456 /wd4996)
 else()
   target_compile_options(s_core PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  set_source_files_properties(src/runtime/platform.cpp PROPERTIES COMPILE_OPTIONS "-Wno-misleading-indentation")
 endif()
 
 add_executable(se src/main.cpp)
