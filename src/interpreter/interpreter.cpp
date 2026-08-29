@@ -3,8 +3,11 @@
 #include <algorithm>
 #include <cctype>
 #include <chrono>
+#include <cmath>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <random>
 #include <sstream>
 #include <thread>
 
@@ -15,6 +18,30 @@ std::shared_ptr<CallableData> callable(std::string name,std::size_t min,std::siz
   auto c=std::make_shared<CallableData>();
   c->name=std::move(name);c->min_args=min;c->max_args=max;c->variadic=variadic;c->call=std::move(f);
   return c;
+}
+double number_value(const Value&v,SourcePos p,const std::string&name){
+  if(auto n=std::get_if<std::int64_t>(&v.data()))return static_cast<double>(*n);
+  if(auto n=std::get_if<double>(&v.data()))return *n;
+  throw Error(p,name+" needs a number.");
+}
+std::int64_t int_value(const Value&v,SourcePos p,const std::string&name){
+  if(auto n=std::get_if<std::int64_t>(&v.data()))return *n;
+  throw Error(p,name+" needs an Int.");
+}
+std::mt19937_64& random_engine(){
+  static std::mt19937_64 engine{std::random_device{}()};
+  return engine;
+}
+std::string platform_name(){
+#ifdef _WIN32
+  return "windows";
+#elif __APPLE__
+  return "macos";
+#elif __linux__
+  return "linux";
+#else
+  return "unknown";
+#endif
 }
 std::string help_text(const Value&v){
   std::ostringstream out;
@@ -76,6 +103,24 @@ std::shared_ptr<ModuleData> Interpreter::builtin_module(const std::string&name){
     m->exports["now"]=callable("time.now",0,0,[](const std::vector<Value>&,SourcePos){return Value(TimeData{std::chrono::system_clock::now()});});
   }else if(name=="file"){
     m->exports["read"]=env_->get("read",{});m->exports["write"]=env_->get("write",{});m->exports["append"]=env_->get("append",{});m->exports["open"]=env_->get("open",{});
+  }else if(name=="math"){
+    m->exports["pi"]=Value(3.14159265358979323846);
+    m->exports["sqrt"]=callable("math.sqrt",1,1,[](const std::vector<Value>&a,SourcePos p){auto n=number_value(a[0],p,"math.sqrt");if(n<0)throw Error(p,"math.sqrt needs a non-negative number.");return Value(std::sqrt(n));});
+    m->exports["abs"]=callable("math.abs",1,1,[](const std::vector<Value>&a,SourcePos p){return Value(std::fabs(number_value(a[0],p,"math.abs")));});
+    m->exports["floor"]=callable("math.floor",1,1,[](const std::vector<Value>&a,SourcePos p){return Value(std::floor(number_value(a[0],p,"math.floor")));});
+    m->exports["ceil"]=callable("math.ceil",1,1,[](const std::vector<Value>&a,SourcePos p){return Value(std::ceil(number_value(a[0],p,"math.ceil")));});
+    m->exports["round"]=callable("math.round",1,1,[](const std::vector<Value>&a,SourcePos p){return Value(std::round(number_value(a[0],p,"math.round")));});
+    m->exports["pow"]=callable("math.pow",2,2,[](const std::vector<Value>&a,SourcePos p){return Value(std::pow(number_value(a[0],p,"math.pow"),number_value(a[1],p,"math.pow")));});
+    m->exports["min"]=callable("math.min",2,2,[](const std::vector<Value>&a,SourcePos p){return Value(std::min(number_value(a[0],p,"math.min"),number_value(a[1],p,"math.min")));});
+    m->exports["max"]=callable("math.max",2,2,[](const std::vector<Value>&a,SourcePos p){return Value(std::max(number_value(a[0],p,"math.max"),number_value(a[1],p,"math.max")));});
+  }else if(name=="random"){
+    m->exports["int"]=callable("random.int",2,2,[](const std::vector<Value>&a,SourcePos p){auto lo=int_value(a[0],p,"random.int"),hi=int_value(a[1],p,"random.int");if(lo>hi)throw Error(p,"random.int needs min <= max.");std::uniform_int_distribution<std::int64_t> d(lo,hi);return Value(d(random_engine()));});
+    m->exports["num"]=callable("random.num",0,0,[](const std::vector<Value>&,SourcePos){std::uniform_real_distribution<double> d(0.0,1.0);return Value(d(random_engine()));});
+  }else if(name=="os"){
+    m->exports["platform"]=Value(platform_name());
+    m->exports["cwd"]=callable("os.cwd",0,0,[](const std::vector<Value>&,SourcePos){return Value(PathData{std::filesystem::current_path()});});
+    m->exports["getenv"]=callable("os.getenv",1,1,[](const std::vector<Value>&a,SourcePos p){auto key=std::get_if<std::string>(&a[0].data());if(!key)throw Error(p,"os.getenv needs Text.");const char*v=std::getenv(key->c_str());return Value(v?std::string(v):std::string{});});
+    m->exports["has_env"]=callable("os.has_env",1,1,[](const std::vector<Value>&a,SourcePos p){auto key=std::get_if<std::string>(&a[0].data());if(!key)throw Error(p,"os.has_env needs Text.");return Value(std::getenv(key->c_str())!=nullptr);});
   }
   return m;
 }
@@ -165,7 +210,7 @@ std::shared_ptr<ModuleData> Interpreter::run_module(const ast::Module&m){
   if(m.builtin)return builtin_module(m.name);
   if(m.native)return load_native_module(m);
   auto old=env_;auto old_source=source_;auto local=std::make_shared<Environment>();env_=local;source_=m.path;install_builtins(local);
-  for(auto&s:m.statements)if(auto u=std::dynamic_pointer_cast<ast::Use>(s)){auto d=modules_.find(u->name);if(d==modules_.end())throw Error(u->pos,"Module '"+u->name+"' was not loaded.");if(u->name=="file"||u->name=="path"||u->name=="time")local->define(u->name,d->second);else for(auto&[n,v]:d->second->exports){if(local->has(n))throw Error(u->pos,"The name '"+n+"' is provided by more than one module.");local->define(n,v);}}
+  for(auto&s:m.statements)if(auto u=std::dynamic_pointer_cast<ast::Use>(s)){auto d=modules_.find(u->name);if(d==modules_.end())throw Error(u->pos,"Module '"+u->name+"' was not loaded.");if(u->name=="file"||u->name=="path"||u->name=="time"||u->name=="math"||u->name=="random"||u->name=="os")local->define(u->name,d->second);else for(auto&[n,v]:d->second->exports){if(local->has(n))throw Error(u->pos,"The name '"+n+"' is provided by more than one module.");local->define(n,v);}}
   try{for(auto&s:m.statements)execute(s);}catch(...){env_=old;source_=old_source;throw;}
   auto out=std::make_shared<ModuleData>();out->name=m.name;for(auto&s:m.statements){std::string n;if(auto t=std::dynamic_pointer_cast<ast::Type>(s))n=t->name;else if(auto f=std::dynamic_pointer_cast<ast::Function>(s))n=f->name;else if(auto a=std::dynamic_pointer_cast<ast::Assign>(s))if(auto v=std::dynamic_pointer_cast<ast::Variable>(a->target))n=v->name;if(!n.empty()&&n[0]!='_')out->exports[n]=local->get(n,s->pos);}env_=old;source_=old_source;return out;
 }
