@@ -1,0 +1,85 @@
+use collections
+use function
+use async
+use option
+use result
+use db
+use https
+use test
+
+make even n
+    give n % 2 == 0
+
+make double n
+    give n * 2
+
+make add a b
+    give a + b
+
+make identity[T] value:T -> T
+    give value
+
+nums = [1, 2, 3, 4, 5]
+evens = collections.filter nums even
+doubled = collections.map nums double
+total = collections.reduce nums 0 add
+middle = collections.slice nums 1 4
+first_two = collections.take nums 2
+last_three = collections.drop nums 2
+
+test.equal evens.len 2
+test.equal doubled.len 5
+test.equal total 15
+test.equal middle.len 3
+test.equal first_two.len 2
+test.equal last_three.len 3
+
+id_number = identity 42
+id_text = identity "SE"
+test.equal id_number 42
+test.equal id_text "SE"
+
+add10 = function.bind add 10
+bound_value = function.call add10 5
+test.equal bound_value 15
+
+label = ""
+match 2
+    case 1
+        label = "one"
+    case 2
+        label = "two"
+    else
+        label = "other"
+test.equal label "two"
+
+maybe = option.some "hello"
+has_value = option.is_some maybe
+fallback = option.or maybe "fallback"
+test.ok has_value
+test.equal fallback "hello"
+
+answer = result.ok 42
+answer_ok = result.is_ok answer
+test.ok answer_ok
+
+job = async.run double 21
+try
+    answer_value = async.await job
+    test.equal answer_value 42
+else err
+    fail err.message
+
+try
+    store = db.open "se-advanced-test.db"
+    db.set store "language" "SE"
+    saved = db.get store "language"
+    saved_ok = option.is_some saved
+    test.ok saved_ok
+    saved_value = option.value saved
+    test.equal saved_value "SE"
+else err
+    fail err.message
+
+https.help
+say "SE 0.6 advanced features OK"
