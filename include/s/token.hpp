@@ -11,11 +11,11 @@ enum class TokenKind {
   End, Newline, Indent, Dedent,
   Identifier, Integer, Number, String, Duration,
   True, False, Say, Ask, If, Else, Repeat, For, In, While, Make, Give,
-  Type, Use, Try, Fail, Set, Map,
+  Type, Use, Try, Fail, Set, Map, Match, Case,
   And, Or, Not,
   Plus, Minus, Star, Slash, Percent, Power,
   Equal, EqualEqual, BangEqual, Greater, Less, GreaterEqual, LessEqual,
-  LeftParen, RightParen, LeftBracket, RightBracket, Comma, Colon, Dot, Range
+  LeftParen, RightParen, LeftBracket, RightBracket, Comma, Colon, Dot, Range, Arrow
 };
 
 struct Token {
