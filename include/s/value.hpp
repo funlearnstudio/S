@@ -25,18 +25,21 @@ struct TypeData;
 struct ModuleData;
 struct FileData;
 struct NativeHandleData;
+struct ByteBufferData;
 
 struct DurationData { std::int64_t milliseconds=0; };
 struct TimeData { std::chrono::system_clock::time_point point; };
 struct PathData { std::filesystem::path path; };
 struct ErrorData { std::string message; std::string source; int line=0; std::string kind="Error"; };
+struct ByteBufferData { std::vector<std::uint8_t> bytes; };
 
 class Value {
 public:
   using Data=std::variant<std::monostate,std::int64_t,double,bool,std::string,DurationData,TimeData,PathData,
                           std::shared_ptr<ErrorData>,std::shared_ptr<ListData>,std::shared_ptr<MapData>,std::shared_ptr<SetData>,
                           std::shared_ptr<CallableData>,std::shared_ptr<ObjectData>,std::shared_ptr<TypeData>,
-                          std::shared_ptr<ModuleData>,std::shared_ptr<FileData>,std::shared_ptr<NativeHandleData>>;
+                          std::shared_ptr<ModuleData>,std::shared_ptr<FileData>,std::shared_ptr<NativeHandleData>,
+                          std::shared_ptr<ByteBufferData>>;
   Value()=default; template<class T> Value(T v):data_(std::move(v)){}
   const Data& data() const{return data_;} Data& data(){return data_;}
   std::string type_name() const; std::string text() const; bool truth(SourcePos) const;
