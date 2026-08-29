@@ -31,10 +31,4 @@ inline std::shared_ptr<ModuleData> combined_platform_builtin_module(const std::s
   return module;
 }
 
-#ifndef S_PLATFORM_IMPL
-#define is_platform_builtin combined_platform_builtin
-#define platform_builtin_type combined_platform_builtin_type
-#define platform_builtin_module combined_platform_builtin_module
-#endif
-
 } // namespace s
