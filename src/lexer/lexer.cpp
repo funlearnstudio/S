@@ -63,7 +63,8 @@ std::vector<Token> Lexer::scan() {
       std::size_t start=i++;
       while (i<source_.size() && (std::isalnum(static_cast<unsigned char>(source_[i])) || source_[i]=='_')) ++i;
       auto text=source_.substr(start,i-start); auto it=words.find(text);
-      add(it==words.end()?TokenKind::Identifier:it->second,text,col); continue;
+      auto after_dot=!out.empty()&&out.back().kind==TokenKind::Dot;
+      add(after_dot?TokenKind::Identifier:(it==words.end()?TokenKind::Identifier:it->second),text,col); continue;
     }
     if (std::isdigit(static_cast<unsigned char>(c))) {
       std::size_t start=i++; bool dot=false;
