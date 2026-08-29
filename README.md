@@ -2,9 +2,9 @@
 
 > Simple at every level.
 
-SE is a low-punctuation, safety-first programming language implemented in C++20. The goal is to keep code simple from beginner programs through types, modules, native interoperability and native compilation.
+SE is a low-punctuation, safety-first programming language implemented in C++20. The goal is to keep code simple from beginner programs through types, modules, testing, JSON, web development, native interoperability and native compilation.
 
-SE 0.3 uses:
+SE 0.5 development uses:
 
 ```text
 Language: SE
@@ -46,24 +46,26 @@ export PATH="$HOME/.local/bin:$PATH"
 se --version
 ```
 
-Expected output:
-
-```text
-SE 0.3.0
-```
+Current development builds report the SE 0.5 development version.
 
 ## CLI
 
 ```bash
 se
 se --version
+se help
+se doctor
 se check hello.se
+se check-all .
 se run hello.se
+se test .
 se build hello.se
+se new app myapp
+se new web mysite
 se bind module.sbind generated
 ```
 
-`se check` loads and statically checks the program and its module graph. `se run` executes through the interpreter. `se build` emits C++20 and invokes the system C++ compiler to create a native executable.
+`se check` loads and statically checks one program and its module graph. `se check-all` checks a source tree. `se run` executes through the interpreter. `se test` runs `*_test.se` files. `se build` emits C++20 and invokes the system C++ compiler to create a native executable.
 
 ## Current language features
 
@@ -78,20 +80,30 @@ se bind module.sbind generated
 - user-defined `type`, fields and methods
 - modules with `use`, private `_name` convention and circular-import detection
 - recoverable `try`, `try expr`, `fail` and Error values
-- file I/O, path utilities and time/duration values
+- file I/O, path utilities, time/duration, math, random and OS helpers
 - binary-safe `Bytes`
+- JSON parsing/stringification and text/collection utilities
+- test assertions and project-level `se test`
+- process execution/output bridge
+- HTTP client
+- synchronous HTTP server and web router
+- request/response helpers and JSON APIs
+- JavaScript bridge through Node.js
+- TypeScript bridge through ts-node / tsc
+- `se new app` and `se new web` project scaffolding
 - C ABI native modules for scalar/Text/Bytes values and managed native handles
 - binding generation through `se bind`
 - interpreter and native C++ backend
-- REPL, `check`, `run` and native `build`
+- REPL, check, run, test and native build workflows
 
 ## Documentation
 
 Start here:
 
 - [Getting Started](docs/getting-started.md)
-- [SE 教學（繁體中文）](docs/tutorial-zh-TW.md)
-- [SE 0.3 技術文件（繁體中文）](docs/technical-reference-zh-TW.md)
+- [SE 完整語言教學（繁體中文，0.5）](docs/complete-language-guide-zh-TW.md)
+- [SE 教學（繁體中文，較短版）](docs/tutorial-zh-TW.md)
+- [SE 技術文件（繁體中文）](docs/technical-reference-zh-TW.md)
 - [Language Reference](docs/language-reference.md)
 - [Syntax Reference](docs/syntax-reference.md)
 - [Types and Methods](docs/types.md)
@@ -123,6 +135,10 @@ Static Checker
 ```
 
 The compiler/runtime intentionally keeps raw pointers, manual memory management, C++ templates and arbitrary C++ ABI details out of ordinary SE programs.
+
+## Current platform boundaries
+
+The built-in HTTP client currently supports plain `http://`, not TLS/HTTPS. The built-in HTTP server is synchronous/blocking and is intended for development, learning and small services rather than being presented as a hardened high-concurrency production server. JavaScript and TypeScript bridges depend on their external runtimes/tools being installed.
 
 ## Migration note
 
