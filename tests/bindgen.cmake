@@ -24,11 +24,28 @@ if(NOT meta_text MATCHES "bytes_echo s_generated_native_test_bytes_echo Bytes ->
   message(FATAL_ERROR "Generated metadata does not contain the Bytes binding.")
 endif()
 
-set(library "${S_WORK}/libgenerated_native_test.so")
+set(native_object "${S_WORK}/native_test.o")
 execute_process(
-  COMMAND "${S_CXX}" -std=c++20 -shared -fPIC -Wall -Wextra -Wpedantic -Werror
+  COMMAND "${S_CC}" -std=c11 -fPIC -Wall -Wextra -Wpedantic -Werror
+          "-I${S_ROOT}/include" "-I${S_ROOT}/native"
+          -c "${S_ROOT}/native/native_test.c" -o "${native_object}"
+  RESULT_VARIABLE c_compile_code
+  OUTPUT_VARIABLE c_compile_out
+  ERROR_VARIABLE c_compile_err)
+if(NOT c_compile_code EQUAL 0)
+  message(FATAL_ERROR "Native C fixture did not compile:\n${c_compile_out}\n${c_compile_err}")
+endif()
+
+set(library "${S_WORK}/libgenerated_native_test.so")
+if(APPLE)
+  set(shared_flag -dynamiclib)
+else()
+  set(shared_flag -shared)
+endif()
+execute_process(
+  COMMAND "${S_CXX}" -std=c++20 "${shared_flag}" -fPIC -Wall -Wextra -Wpedantic -Werror
           "-I${S_ROOT}/include" "-I${S_ROOT}/native" "-I${S_WORK}"
-          "${source}" "${S_ROOT}/native/native_test.c" -o "${library}"
+          "${source}" "${native_object}" -o "${library}"
   RESULT_VARIABLE compile_code
   OUTPUT_VARIABLE compile_out
   ERROR_VARIABLE compile_err)
