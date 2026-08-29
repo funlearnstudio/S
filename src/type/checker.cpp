@@ -1,5 +1,6 @@
 #include "s/checker.hpp"
 #include "s/error.hpp"
+#include "s/platform.hpp"
 #include <algorithm>
 
 namespace s {
@@ -92,6 +93,7 @@ void Checker::install_builtins(){
 }
 
 TypeInfo Checker::builtin_module(const std::string& name) const{
+  if(is_platform_builtin(name)) return platform_builtin_type(name);
   TypeInfo m(TypeKind::Module);
   m.name=name;
   if(name=="path"){
