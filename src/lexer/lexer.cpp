@@ -15,6 +15,7 @@ std::vector<Token> Lexer::scan() {
     {"while",TokenKind::While},{"make",TokenKind::Make},{"give",TokenKind::Give},
     {"type",TokenKind::Type},{"use",TokenKind::Use},{"try",TokenKind::Try},
     {"fail",TokenKind::Fail},{"set",TokenKind::Set},{"map",TokenKind::Map},
+    {"match",TokenKind::Match},{"case",TokenKind::Case},
     {"and",TokenKind::And},{"or",TokenKind::Or},{"not",TokenKind::Not}
   };
 
@@ -93,8 +94,8 @@ std::vector<Token> Lexer::scan() {
       ++i; add(TokenKind::String,value,col); continue;
     }
     auto two = i+1<source_.size()?source_.substr(i,2):"";
-    if (two=="**"||two=="=="||two=="!="||two==">="||two=="<="||two=="..") {
-      TokenKind k=two=="**"?TokenKind::Power:two=="=="?TokenKind::EqualEqual:two=="!="?TokenKind::BangEqual:two==">="?TokenKind::GreaterEqual:two=="<="?TokenKind::LessEqual:TokenKind::Range;
+    if (two=="**"||two=="=="||two=="!="||two==">="||two=="<="||two==".."||two=="->") {
+      TokenKind k=two=="**"?TokenKind::Power:two=="=="?TokenKind::EqualEqual:two=="!="?TokenKind::BangEqual:two==">="?TokenKind::GreaterEqual:two=="<="?TokenKind::LessEqual:two==".."?TokenKind::Range:TokenKind::Arrow;
       add(k,two,col); i+=2; continue;
     }
     TokenKind k;
