@@ -4,12 +4,15 @@
 
 SE is a low-punctuation, safety-first programming language implemented in C++20. The goal is to keep code simple from beginner programs through types, modules, testing, JSON, web development, native interoperability and native compilation.
 
-SE 0.5 development uses:
+SE 是一門以 C++20 實作、低標點、重視安全性的程式語言。目標是從初學程式一路到型別、模組、測試、JSON、Web、原生互通與 Native Build，都保持簡單。
+
+Current development line / 目前開發版本：
 
 ```text
 Language: SE
 CLI:      se
 Source:   .se
+Version:  SE 0.6.0-dev
 ```
 
 ```se
@@ -28,11 +31,24 @@ say player.name
 say player.hp
 ```
 
-## Build SE
+## Installation / 安裝
 
-Requirements: CMake 3.20+ and a C++20 compiler.
+Full standalone guide / 完整獨立安裝說明：**[docs/installation.md](docs/installation.md)**
+
+### English
+
+Requirements:
+
+- CMake 3.20+
+- a C++20 compiler
+- Git
+- `curl` if you want to use the SE HTTPS module
+
+Clone and build:
 
 ```bash
+git clone https://github.com/funlearnstudio/SE.git
+cd SE
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
@@ -46,7 +62,118 @@ export PATH="$HOME/.local/bin:$PATH"
 se --version
 ```
 
-Current development builds report the SE 0.5 development version.
+To keep `se` available after restarting your terminal, add this to your shell profile such as `~/.zshrc` or `~/.bashrc`:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Then reload the shell configuration:
+
+```bash
+source ~/.zshrc
+```
+
+On Windows, build with a C++20-capable Visual Studio/MSVC environment:
+
+```powershell
+git clone https://github.com/funlearnstudio/SE.git
+cd SE
+cmake -S . -B build
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
+cmake --install build --config Release --prefix "$env:USERPROFILE\.local"
+```
+
+Add the installed `bin` directory to `PATH`, then verify:
+
+```powershell
+se --version
+se doctor
+```
+
+### 中文
+
+需求：
+
+- CMake 3.20 以上
+- 支援 C++20 的編譯器
+- Git
+- 如果要使用 SE 的 HTTPS 模組，需要系統有 `curl`
+
+下載並編譯：
+
+```bash
+git clone https://github.com/funlearnstudio/SE.git
+cd SE
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure
+```
+
+macOS / Linux 安裝：
+
+```bash
+cmake --install build --prefix "$HOME/.local"
+export PATH="$HOME/.local/bin:$PATH"
+se --version
+```
+
+如果希望重新開啟 Terminal 後仍然可以直接使用 `se`，把下面這行加入 `~/.zshrc` 或 `~/.bashrc`：
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+例如使用 zsh：
+
+```bash
+source ~/.zshrc
+```
+
+Windows 可以在支援 C++20 的 Visual Studio / MSVC 環境中執行：
+
+```powershell
+git clone https://github.com/funlearnstudio/SE.git
+cd SE
+cmake -S . -B build
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
+cmake --install build --config Release --prefix "$env:USERPROFILE\.local"
+```
+
+接著把安裝位置的 `bin` 資料夾加入 `PATH`，再檢查：
+
+```powershell
+se --version
+se doctor
+```
+
+### First program / 第一個程式
+
+Create `hello.se`:
+
+```se
+say "Hello SE"
+```
+
+Run it:
+
+```bash
+se run hello.se
+```
+
+Check it without running:
+
+```bash
+se check hello.se
+```
+
+Build a native executable:
+
+```bash
+se build hello.se
+```
 
 ## CLI
 
@@ -76,16 +203,24 @@ se bind module.sbind generated
 - `if`, `else`, `repeat`, `for`, `while`
 - `make`, low-punctuation calls and `give`
 - List, Map and Set with checked operations
+- collection `filter`, `map`, `reduce`, `slice`, `take`, `drop` and sorting helpers
 - `.len`, `.upper`, `.lower`
 - user-defined `type`, fields and methods
 - modules with `use`, private `_name` convention and circular-import detection
 - recoverable `try`, `try expr`, `fail` and Error values
+- Option and Result helpers
+- lexical closures and function helpers
+- generic functions
+- value-based `match` / `case`
+- managed Task-style async / await
 - file I/O, path utilities, time/duration, math, random and OS helpers
+- lightweight persistent Text key/value database API
 - binary-safe `Bytes`
 - JSON parsing/stringification and text/collection utilities
 - test assertions and project-level `se test`
 - process execution/output bridge
 - HTTP client
+- HTTPS client through system `curl`
 - synchronous HTTP server and web router
 - request/response helpers and JSON APIs
 - JavaScript bridge through Node.js
@@ -100,10 +235,13 @@ se bind module.sbind generated
 
 Start here:
 
+- [Installation / 安裝](docs/installation.md)
+- [繁體中文文件總覽](docs/README-zh-TW.md)
 - [Getting Started](docs/getting-started.md)
-- [SE 完整語言教學（繁體中文，0.5）](docs/complete-language-guide-zh-TW.md)
+- [SE 完整語言教學（繁體中文）](docs/complete-language-guide-zh-TW.md)
 - [SE 教學（繁體中文，較短版）](docs/tutorial-zh-TW.md)
 - [SE 技術文件（繁體中文）](docs/technical-reference-zh-TW.md)
+- [SE 0.6 進階功能（繁體中文）](docs/advanced-0.6-zh-TW.md)
 - [Language Reference](docs/language-reference.md)
 - [Syntax Reference](docs/syntax-reference.md)
 - [Types and Methods](docs/types.md)
@@ -138,7 +276,7 @@ The compiler/runtime intentionally keeps raw pointers, manual memory management,
 
 ## Current platform boundaries
 
-The built-in HTTP client currently supports plain `http://`, not TLS/HTTPS. The built-in HTTP server is synchronous/blocking and is intended for development, learning and small services rather than being presented as a hardened high-concurrency production server. JavaScript and TypeScript bridges depend on their external runtimes/tools being installed.
+SE 0.6 currently provides generic functions rather than a complete generic user-type/trait system. Pattern matching is value/equality based rather than full destructuring with guards. The built-in database is a lightweight persistent Text key/value store rather than SQL. HTTPS delegates TLS transport to the system `curl` command. The built-in HTTP server is synchronous/blocking and is intended for development, learning and small services rather than being presented as a hardened high-concurrency production server. Managed async tasks serialize callbacks entering the interpreter VM and are not advertised as unrestricted parallel SE execution. JavaScript and TypeScript bridges depend on their external runtimes/tools being installed.
 
 ## Migration note
 
