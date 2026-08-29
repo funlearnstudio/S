@@ -1,3 +1,4 @@
+#include "s/bindgen.hpp"
 #include "s/checker.hpp"
 #include "s/compiler.hpp"
 #include "s/error.hpp"
@@ -25,12 +26,21 @@ int file_command(const std::string&cmd,const std::filesystem::path&path){
 #else
     std::filesystem::path root=std::filesystem::current_path();
 #endif
-    std::string command=compiler+" -std=c++20 -O2 -Wall -Wextra -Wpedantic -I"+shell_quote((root/"include").string())+" "+shell_quote(cpp_path.string())+" "+shell_quote((root/"src/runtime/error.cpp").string())+" "+shell_quote((root/"src/runtime/value.cpp").string())+" "+shell_quote((root/"src/interpreter/interpreter.cpp").string())+" "+shell_quote((root/"src/ffi/ffi.cpp").string())+" -pthread";
+    std::string command=compiler+" -std=c++20 -O2 -Wall -Wextra -Wpedantic -Werror -I"+shell_quote((root/"include").string())+" "+shell_quote(cpp_path.string())+" "+shell_quote((root/"src/runtime/error.cpp").string())+" "+shell_quote((root/"src/runtime/value.cpp").string())+" "+shell_quote((root/"src/interpreter/interpreter.cpp").string())+" "+shell_quote((root/"src/ffi/ffi.cpp").string())+" -pthread";
 #ifdef __linux__
     command+=" -ldl";
 #endif
     command+=" -o "+shell_quote(output.string());int code=std::system(command.c_str());std::filesystem::remove(cpp_path);if(code!=0)throw std::runtime_error("The C++ compiler could not build the generated program.");std::cout<<"Built "<<output.string()<<"\n";return 0;
   }catch(const s::Error&e){std::cerr<<s::format_error(e,source);return 1;}catch(const s::RuntimeFailure&e){auto&x=e.error();std::cerr<<x.kind;if(!x.source.empty())std::cerr<<" in "<<x.source;if(x.line)std::cerr<<" on line "<<x.line;std::cerr<<": "<<x.message<<'\n';return 1;}
+}
+int bind_command(const std::filesystem::path&definition,const std::filesystem::path&output){
+  try{
+    auto files=s::generate_bindings(definition,output);
+    std::cout<<"Generated "<<files.metadata.string()<<'\n';
+    std::cout<<"Generated "<<files.header.string()<<'\n';
+    std::cout<<"Generated "<<files.source.string()<<'\n';
+    return 0;
+  }catch(const s::Error&e){std::string source;try{source=read_file(definition);}catch(...){ }std::cerr<<s::format_error(e,source);return 1;}
 }
 void repl(){
   std::cout<<"S 0.2.0\nType S code. Use a blank line to finish a block. Ctrl-D exits.\n";
@@ -39,4 +49,18 @@ void repl(){
   while(true){std::cout<<(pending.empty()?"> ":". ");if(!std::getline(std::cin,line)){execute();break;}if(line.empty()&&!pending.empty()){execute();continue;}pending+=line+'\n';if(line.find_first_not_of(' ')==0&&line.rfind("if ",0)!=0&&line.rfind("for ",0)!=0&&line.rfind("while ",0)!=0&&line.rfind("repeat ",0)!=0&&line.rfind("make ",0)!=0&&line.rfind("type ",0)!=0&&line!="try")execute();}
 }
 }
-int main(int argc,char**argv){try{if(argc==1){repl();return 0;}if(argc==2&&std::string(argv[1])=="--version"){std::cout<<"S 0.2.0\n";return 0;}if(argc!=3){std::cerr<<"Use: s run file.s | s check file.s | s build file.s\n";return 2;}std::string cmd=argv[1];if(cmd!="run"&&cmd!="check"&&cmd!="build"){std::cerr<<"Unknown command '"<<cmd<<"'. Use run, check, or build.\n";return 2;}return file_command(cmd,argv[2]);}catch(const std::exception&e){std::cerr<<"Error: "<<e.what()<<'\n';return 1;}}
+int main(int argc,char**argv){
+  try{
+    if(argc==1){repl();return 0;}
+    if(argc==2&&std::string(argv[1])=="--version"){std::cout<<"S 0.2.0\n";return 0;}
+    if(argc>=3&&std::string(argv[1])=="bind"){
+      if(argc>4){std::cerr<<"Use: s bind module.sbind [output-directory]\n";return 2;}
+      std::filesystem::path definition=argv[2];
+      std::filesystem::path output=argc==4?std::filesystem::path(argv[3]):definition.parent_path();
+      if(output.empty())output=".";
+      return bind_command(definition,output);
+    }
+    if(argc!=3){std::cerr<<"Use: s run file.s | s check file.s | s build file.s | s bind module.sbind [output-directory]\n";return 2;}
+    std::string cmd=argv[1];if(cmd!="run"&&cmd!="check"&&cmd!="build"){std::cerr<<"Unknown command '"<<cmd<<"'. Use run, check, build, or bind.\n";return 2;}return file_command(cmd,argv[2]);
+  }catch(const std::exception&e){std::cerr<<"Error: "<<e.what()<<'\n';return 1;}
+}
