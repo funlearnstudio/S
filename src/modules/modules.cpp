@@ -58,7 +58,9 @@ std::filesystem::path ModuleLoader::resolve(const std::string& name,const std::f
   bases.emplace_back(std::filesystem::path(S_SOURCE_ROOT));
 #endif
   for(auto& base:bases){
-    std::vector<std::filesystem::path> source_candidates{base/(name+".s"),base/name/(name+".s")};
+    std::vector<std::filesystem::path> source_candidates{
+      base/(name+".se"),base/name/(name+".se"),
+      base/(name+".s"),base/name/(name+".s")};
     for(auto& p:source_candidates) if(std::filesystem::is_regular_file(p)) return p;
     std::vector<std::filesystem::path> native_candidates{base/(name+".snative"),base/"native"/(name+".snative"),base/name/(name+".snative")};
     for(auto& p:native_candidates){
@@ -68,7 +70,7 @@ std::filesystem::path ModuleLoader::resolve(const std::string& name,const std::f
       }
     }
   }
-  throw Error({1,1},"I could not find module '"+name+"'.","S looked in the current project, standard library, and package directories.");
+  throw Error({1,1},"I could not find module '"+name+"'.","SE looked in the current project, standard library, and package directories.");
 }
 
 std::size_t ModuleLoader::load_module(const std::string& name,const std::filesystem::path& from){
