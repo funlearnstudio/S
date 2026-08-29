@@ -15,6 +15,7 @@ std::vector<Token> Lexer::scan() {
     {"while",TokenKind::While},{"make",TokenKind::Make},{"give",TokenKind::Give},
     {"type",TokenKind::Type},{"use",TokenKind::Use},{"try",TokenKind::Try},
     {"fail",TokenKind::Fail},{"set",TokenKind::Set},{"map",TokenKind::Map},
+    {"match",TokenKind::Match},{"case",TokenKind::Case},
     {"and",TokenKind::And},{"or",TokenKind::Or},{"not",TokenKind::Not}
   };
 
@@ -62,7 +63,8 @@ std::vector<Token> Lexer::scan() {
       std::size_t start=i++;
       while (i<source_.size() && (std::isalnum(static_cast<unsigned char>(source_[i])) || source_[i]=='_')) ++i;
       auto text=source_.substr(start,i-start); auto it=words.find(text);
-      add(it==words.end()?TokenKind::Identifier:it->second,text,col); continue;
+      auto after_dot=!out.empty()&&out.back().kind==TokenKind::Dot;
+      add(after_dot?TokenKind::Identifier:(it==words.end()?TokenKind::Identifier:it->second),text,col); continue;
     }
     if (std::isdigit(static_cast<unsigned char>(c))) {
       std::size_t start=i++; bool dot=false;
@@ -93,8 +95,8 @@ std::vector<Token> Lexer::scan() {
       ++i; add(TokenKind::String,value,col); continue;
     }
     auto two = i+1<source_.size()?source_.substr(i,2):"";
-    if (two=="**"||two=="=="||two=="!="||two==">="||two=="<="||two=="..") {
-      TokenKind k=two=="**"?TokenKind::Power:two=="=="?TokenKind::EqualEqual:two=="!="?TokenKind::BangEqual:two==">="?TokenKind::GreaterEqual:two=="<="?TokenKind::LessEqual:TokenKind::Range;
+    if (two=="**"||two=="=="||two=="!="||two==">="||two=="<="||two==".."||two=="->") {
+      TokenKind k=two=="**"?TokenKind::Power:two=="=="?TokenKind::EqualEqual:two=="!="?TokenKind::BangEqual:two==">="?TokenKind::GreaterEqual:two=="<="?TokenKind::LessEqual:two==".."?TokenKind::Range:TokenKind::Arrow;
       add(k,two,col); i+=2; continue;
     }
     TokenKind k;

@@ -22,9 +22,25 @@ ast::Block Parser::block(){
 }
 
 std::shared_ptr<ast::Function> Parser::function(SourcePos start){
-  auto name=take(TokenKind::Identifier,"Give this function a name."); std::vector<std::string> params;
-  while(check(TokenKind::Identifier)) params.push_back(tokens_[at_++].text);
-  auto b=block(); return std::make_shared<ast::Function>(start,name.text,std::move(params),std::move(b));
+  auto name=take(TokenKind::Identifier,"Give this function a name.");
+  std::vector<std::string> generics;
+  if(match(TokenKind::LeftBracket)){
+    if(check(TokenKind::RightBracket)) throw Error(peek().pos,"A generic function needs at least one type name.");
+    do { generics.push_back(take(TokenKind::Identifier,"Write a generic type name.").text); } while(match(TokenKind::Comma));
+    take(TokenKind::RightBracket,"Close generic type names with ']'.");
+  }
+  std::vector<std::string> params;
+  std::vector<std::string> param_types;
+  while(check(TokenKind::Identifier)){
+    params.push_back(tokens_[at_++].text);
+    std::string type;
+    if(match(TokenKind::Colon)) type=take(TokenKind::Identifier,"Write a type name after ':'.").text;
+    param_types.push_back(std::move(type));
+  }
+  std::string result_type;
+  if(match(TokenKind::Arrow)) result_type=take(TokenKind::Identifier,"Write a return type after '->'.").text;
+  auto b=block();
+  return std::make_shared<ast::Function>(start,name.text,std::move(params),std::move(b),std::move(generics),std::move(param_types),std::move(result_type));
 }
 
 std::shared_ptr<ast::Type> Parser::type_decl(SourcePos start){
@@ -49,6 +65,31 @@ ast::StmtPtr Parser::statement(){
   if(match(TokenKind::Say)){ auto e=expression(); line_end(); return std::make_shared<ast::Say>(start.pos,e); }
   if(match(TokenKind::Use)){ auto n=take(TokenKind::Identifier,"Write a module name after 'use'."); line_end(); return std::make_shared<ast::Use>(start.pos,n.text); }
   if(match(TokenKind::Type)) return type_decl(start.pos);
+  if(match(TokenKind::Match)){
+    auto value=expression();
+    take(TokenKind::Newline,"Start match cases on the next line.");
+    take(TokenKind::Indent,"Indent match cases by 4 spaces.");
+    std::vector<ast::MatchCase> cases; ast::Block fallback;
+    while(!check(TokenKind::Dedent)&&!check(TokenKind::End)){
+      if(match(TokenKind::Newline)) continue;
+      Token item=peek();
+      if(match(TokenKind::Case)){
+        auto pattern=expression();
+        auto body=block();
+        cases.push_back({item.pos,std::move(pattern),std::move(body)});
+        continue;
+      }
+      if(match(TokenKind::Else)){
+        fallback=block();
+        while(match(TokenKind::Newline)){}
+        if(!check(TokenKind::Dedent)) throw Error(peek().pos,"'else' must be the last branch in a match.");
+        break;
+      }
+      throw Error(peek().pos,"Inside match, use 'case value' or 'else'.");
+    }
+    take(TokenKind::Dedent,"This match block was not closed correctly.");
+    return std::make_shared<ast::Match>(start.pos,value,std::move(cases),std::move(fallback));
+  }
   if(match(TokenKind::If)){
     auto c=expression(); auto yes=block(); ast::Block no;
     if(match(TokenKind::Else)) no=block();
@@ -153,10 +194,14 @@ ast::ExprPtr Parser::prefix(){
 }
 
 ast::ExprPtr Parser::postfix(ast::ExprPtr value){
+  auto take_member_name=[&](){
+    if(check(TokenKind::Identifier)||check(TokenKind::Map)) return tokens_[at_++];
+    throw Error(peek().pos,"Write a member name after '.'.");
+  };
   auto attach_members=[&](ast::ExprPtr arg){
     while(true){
       if(match(TokenKind::LeftBracket)){auto i=expression();take(TokenKind::RightBracket,"Close this index with ']'.");arg=std::make_shared<ast::Index>(arg->pos,arg,i);continue;}
-      if(match(TokenKind::Dot)){auto n=take(TokenKind::Identifier,"Write a member name after '.'.");arg=std::make_shared<ast::Member>(arg->pos,arg,n.text);continue;}
+      if(match(TokenKind::Dot)){auto n=take_member_name();arg=std::make_shared<ast::Member>(arg->pos,arg,n.text);continue;}
       break;
     }
     return arg;

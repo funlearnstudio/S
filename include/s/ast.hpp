@@ -38,13 +38,29 @@ struct If final : Stmt { If(SourcePos p,ExprPtr c,Block t,Block e):Stmt(p),condi
 struct Repeat final : Stmt { Repeat(SourcePos p,ExprPtr c,Block b):Stmt(p),count(std::move(c)),body(std::move(b)){} ExprPtr count; Block body; };
 struct For final : Stmt { For(SourcePos p,std::vector<std::string> n,ExprPtr v,Block b):Stmt(p),names(std::move(n)),values(std::move(v)),body(std::move(b)){} std::vector<std::string> names; ExprPtr values; Block body; };
 struct While final : Stmt { While(SourcePos p,ExprPtr c,Block b):Stmt(p),condition(std::move(c)),body(std::move(b)){} ExprPtr condition; Block body; };
-struct Function final : Stmt { Function(SourcePos p,std::string n,std::vector<std::string> a,Block b):Stmt(p),name(std::move(n)),params(std::move(a)),body(std::move(b)){} std::string name; std::vector<std::string> params; Block body; };
+struct Function final : Stmt {
+  Function(SourcePos p,std::string n,std::vector<std::string> a,Block b,std::vector<std::string> g={},std::vector<std::string> pt={},std::string rt={})
+      :Stmt(p),name(std::move(n)),params(std::move(a)),body(std::move(b)),generic_params(std::move(g)),param_types(std::move(pt)),result_type(std::move(rt)){}
+  std::string name;
+  std::vector<std::string> params;
+  Block body;
+  std::vector<std::string> generic_params;
+  std::vector<std::string> param_types;
+  std::string result_type;
+};
 struct Give final : Stmt { Give(SourcePos p,ExprPtr v):Stmt(p),value(std::move(v)){} ExprPtr value; };
 struct FieldDecl { SourcePos pos; std::string name; ExprPtr value; };
 struct Type final : Stmt { Type(SourcePos p,std::string n,std::vector<FieldDecl> f,std::vector<std::shared_ptr<Function>> m):Stmt(p),name(std::move(n)),fields(std::move(f)),methods(std::move(m)){} std::string name; std::vector<FieldDecl> fields; std::vector<std::shared_ptr<Function>> methods; };
 struct Use final : Stmt { Use(SourcePos p,std::string n):Stmt(p),name(std::move(n)){} std::string name; };
 struct Try final : Stmt { Try(SourcePos p,Block b,std::string n,Block e):Stmt(p),body(std::move(b)),error_name(std::move(n)),else_block(std::move(e)){} Block body; std::string error_name; Block else_block; };
 struct Fail final : Stmt { Fail(SourcePos p,ExprPtr v):Stmt(p),value(std::move(v)){} ExprPtr value; };
+struct MatchCase { SourcePos pos; ExprPtr pattern; Block body; };
+struct Match final : Stmt {
+  Match(SourcePos p,ExprPtr v,std::vector<MatchCase> c,Block e):Stmt(p),value(std::move(v)),cases(std::move(c)),else_block(std::move(e)){}
+  ExprPtr value;
+  std::vector<MatchCase> cases;
+  Block else_block;
+};
 
 struct NativeFunction {
   std::string name;

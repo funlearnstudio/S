@@ -6,7 +6,7 @@
 #include <vector>
 
 namespace s {
-enum class TypeKind { Unknown, None, Int, Num, Text, Bool, Bytes, List, Map, Set, Function, Object, Module, Error, Duration, Time, Path, File, NativeHandle };
+enum class TypeKind { Unknown, Generic, None, Int, Num, Text, Bool, Bytes, List, Map, Set, Function, Object, Module, Error, Duration, Time, Path, File, NativeHandle };
 struct FunctionSig;
 struct UserTypeInfo;
 struct TypeInfo {
@@ -19,7 +19,14 @@ struct TypeInfo {
   TypeInfo()=default;
   explicit TypeInfo(TypeKind k);
 };
-struct FunctionSig { std::vector<TypeInfo> params; TypeInfo result; bool fallible=false; bool variadic=false; std::size_t min_args=0; };
+struct FunctionSig {
+  std::vector<TypeInfo> params;
+  TypeInfo result;
+  bool fallible=false;
+  bool variadic=false;
+  std::size_t min_args=0;
+  std::vector<std::string> generic_params;
+};
 struct UserTypeInfo { std::string name; std::unordered_map<std::string,TypeInfo> fields; std::unordered_map<std::string,std::shared_ptr<FunctionSig>> methods; };
 
 inline TypeInfo::TypeInfo(TypeKind k):kind(k){

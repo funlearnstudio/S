@@ -28,13 +28,18 @@ std::string CppCompiler::expr(const ast::ExprPtr&e) const{
 }
 
 std::string CppCompiler::block(const ast::Block&b) const{std::string r="ast::Block{";for(std::size_t i=0;i<b.size();++i){if(i)r+=",";r+=stmt(b[i]);}return r+"}";}
-std::string CppCompiler::function(const std::shared_ptr<ast::Function>&x) const{return "std::make_shared<ast::Function>("+pos(x->pos)+","+q(x->name)+","+strings(x->params)+","+block(x->body)+")";}
+std::string CppCompiler::function(const std::shared_ptr<ast::Function>&x) const{return "std::make_shared<ast::Function>("+pos(x->pos)+","+q(x->name)+","+strings(x->params)+","+block(x->body)+","+strings(x->generic_params)+","+strings(x->param_types)+","+q(x->result_type)+")";}
 
 std::string CppCompiler::stmt(const ast::StmtPtr&s) const{
   if(auto x=std::dynamic_pointer_cast<ast::ExprStmt>(s))return "std::make_shared<ast::ExprStmt>("+pos(x->pos)+","+expr(x->value)+")";
   if(auto x=std::dynamic_pointer_cast<ast::Assign>(s))return "std::make_shared<ast::Assign>("+pos(x->pos)+","+expr(x->target)+","+expr(x->value)+","+block(x->init)+")";
   if(auto x=std::dynamic_pointer_cast<ast::Say>(s))return "std::make_shared<ast::Say>("+pos(x->pos)+","+expr(x->value)+")";
   if(auto x=std::dynamic_pointer_cast<ast::If>(s))return "std::make_shared<ast::If>("+pos(x->pos)+","+expr(x->condition)+","+block(x->then_block)+","+block(x->else_block)+")";
+  if(auto x=std::dynamic_pointer_cast<ast::Match>(s)){
+    std::string cases="std::vector<ast::MatchCase>{";
+    for(std::size_t i=0;i<x->cases.size();++i){if(i)cases+=",";cases+="ast::MatchCase{"+pos(x->cases[i].pos)+","+expr(x->cases[i].pattern)+","+block(x->cases[i].body)+"}";}cases+="}";
+    return "std::make_shared<ast::Match>("+pos(x->pos)+","+expr(x->value)+","+cases+","+block(x->else_block)+")";
+  }
   if(auto x=std::dynamic_pointer_cast<ast::Repeat>(s))return "std::make_shared<ast::Repeat>("+pos(x->pos)+","+expr(x->count)+","+block(x->body)+")";
   if(auto x=std::dynamic_pointer_cast<ast::For>(s))return "std::make_shared<ast::For>("+pos(x->pos)+","+strings(x->names)+","+expr(x->values)+","+block(x->body)+")";
   if(auto x=std::dynamic_pointer_cast<ast::While>(s))return "std::make_shared<ast::While>("+pos(x->pos)+","+expr(x->condition)+","+block(x->body)+")";
