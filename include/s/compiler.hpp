@@ -5,8 +5,10 @@ namespace s {
 class CppCompiler {
 public: std::string generate(const ast::Program&);
 private:
-  int id_=0,indent_=1; std::string out_; std::string env_="env";
-  std::string expr(const ast::ExprPtr&); void stmt(const ast::StmtPtr&); void block(const ast::Block&);
-  std::string pad() const{return std::string(indent_*2,' ');} std::string fresh(){return "_s"+std::to_string(id_++);}
+  std::string expr(const ast::ExprPtr&) const;
+  std::string stmt(const ast::StmtPtr&) const;
+  std::string function(const std::shared_ptr<ast::Function>&) const;
+  std::string block(const ast::Block&) const;
+  std::string module(const ast::Module&) const;
 };
 } // namespace s

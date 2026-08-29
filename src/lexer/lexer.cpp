@@ -13,6 +13,8 @@ std::vector<Token> Lexer::scan() {
     {"ask",TokenKind::Ask},{"if",TokenKind::If},{"else",TokenKind::Else},
     {"repeat",TokenKind::Repeat},{"for",TokenKind::For},{"in",TokenKind::In},
     {"while",TokenKind::While},{"make",TokenKind::Make},{"give",TokenKind::Give},
+    {"type",TokenKind::Type},{"use",TokenKind::Use},{"try",TokenKind::Try},
+    {"fail",TokenKind::Fail},{"set",TokenKind::Set},{"map",TokenKind::Map},
     {"and",TokenKind::And},{"or",TokenKind::Or},{"not",TokenKind::Not}
   };
 
@@ -39,8 +41,7 @@ std::vector<Token> Lexer::scan() {
           indents.push_back(spaces); add(TokenKind::Indent, "", 1);
         } else {
           while (spaces < indents.back()) { indents.pop_back(); add(TokenKind::Dedent, "", 1); }
-          if (spaces != indents.back())
-            throw Error({line, 1}, "This indentation does not match an earlier block.");
+          if (spaces != indents.back()) throw Error({line, 1}, "This indentation does not match an earlier block.");
         }
       }
       i = p;
@@ -70,15 +71,22 @@ std::vector<Token> Lexer::scan() {
         if (source_[i]=='.' && i+1<source_.size() && source_[i+1]!='.' && std::isdigit(static_cast<unsigned char>(source_[i+1]))) { dot=true; ++i; continue; }
         break;
       }
+      if(!dot){
+        std::size_t unit=i;
+        while(unit<source_.size()&&std::isalpha(static_cast<unsigned char>(source_[unit])))++unit;
+        auto suffix=source_.substr(i,unit-i);
+        if(suffix=="ms"||suffix=="s"||suffix=="min"){
+          auto raw=source_.substr(start,i-start)+suffix; add(TokenKind::Duration,raw,col); i=unit; continue;
+        }
+      }
       add(dot?TokenKind::Number:TokenKind::Integer,source_.substr(start,i-start),col); continue;
     }
     if (c == '"') {
       ++i; std::string value;
       while (i<source_.size() && source_[i]!='"') {
         if (source_[i]=='\n') throw Error({line,col},"This text is missing its closing quote.");
-        if (source_[i]=='\\' && i+1<source_.size()) {
-          char e=source_[++i]; value += e=='n'?'\n':e=='t'?'\t':e;
-        } else value += source_[i];
+        if (source_[i]=='\\' && i+1<source_.size()) { char e=source_[++i]; value += e=='n'?'\n':e=='t'?'\t':e; }
+        else value += source_[i];
         ++i;
       }
       if (i>=source_.size()) throw Error({line,col},"This text is missing its closing quote.");
@@ -99,7 +107,7 @@ std::vector<Token> Lexer::scan() {
       case ')':k=TokenKind::RightParen;--bracket_depth;break;
       case '[':k=TokenKind::LeftBracket;++bracket_depth;break;
       case ']':k=TokenKind::RightBracket;--bracket_depth;break;
-      case ',':k=TokenKind::Comma;break; case '.':k=TokenKind::Dot;break;
+      case ',':k=TokenKind::Comma;break; case ':':k=TokenKind::Colon;break; case '.':k=TokenKind::Dot;break;
       default: throw Error({line,col},std::string("I don't understand the character '")+c+"'.");
     }
     if (bracket_depth<0) throw Error({line,col},"This closing bracket has no matching opening bracket.");
