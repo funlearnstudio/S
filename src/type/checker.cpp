@@ -129,7 +129,7 @@ void Checker::install_builtins(){
 }
 
 TypeInfo Checker::builtin_module(const std::string& name) const{
-  if(is_platform_builtin(name))return platform_builtin_type(name);
+  if(combined_platform_builtin(name))return combined_platform_builtin_type(name);
   TypeInfo m(TypeKind::Module);m.name=name;
   if(name=="path"){
     m.members["join"]=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Path),false,true,1);
@@ -182,7 +182,7 @@ TypeInfo Checker::expr(const ast::ExprPtr& e){
     auto a=expr(x->left),b=expr(x->right);if(x->op==TokenKind::And||x->op==TokenKind::Or){if(a.kind!=TypeKind::Unknown&&a.kind!=TypeKind::Bool)throw Error(x->pos,"'and' and 'or' need Bool values.");if(b.kind!=TypeKind::Unknown&&b.kind!=TypeKind::Bool)throw Error(x->pos,"'and' and 'or' need Bool values.");return TypeInfo(TypeKind::Bool);}if(x->op==TokenKind::EqualEqual||x->op==TokenKind::BangEqual||x->op==TokenKind::In)return TypeInfo(TypeKind::Bool);if(x->op==TokenKind::Greater||x->op==TokenKind::Less||x->op==TokenKind::GreaterEqual||x->op==TokenKind::LessEqual){if(a.kind==TypeKind::Unknown&&numeric(b))constrain(x->left,b);if(b.kind==TypeKind::Unknown&&numeric(a))constrain(x->right,a);if((a.kind!=TypeKind::Unknown&&!numeric(a))||(b.kind!=TypeKind::Unknown&&!numeric(b)))throw Error(x->pos,"Comparisons need numbers.");return TypeInfo(TypeKind::Bool);}if(x->op==TokenKind::Plus&&a.kind==TypeKind::Text&&b.kind==TypeKind::Text)return TypeInfo(TypeKind::Text);if(a.kind==TypeKind::Unknown&&numeric(b)){constrain(x->left,b);a=b;}if(b.kind==TypeKind::Unknown&&numeric(a)){constrain(x->right,a);b=a;}if(a.kind==TypeKind::Unknown||b.kind==TypeKind::Unknown)return TypeInfo{};if(!numeric(a)||!numeric(b))throw Error(x->pos,"This math operation cannot combine "+type_text(a)+" and "+type_text(b)+".");return (a.kind==TypeKind::Num||b.kind==TypeKind::Num||x->op==TokenKind::Slash||x->op==TokenKind::Power)?TypeInfo(TypeKind::Num):TypeInfo(TypeKind::Int);
   }
   if(auto x=std::dynamic_pointer_cast<ast::Call>(e)){
-    std::shared_ptr<FunctionSig> sig;if(auto m=std::dynamic_pointer_cast<ast::Member>(x->callee))sig=member_call(expr(m->value),m->name,m->pos);else{auto c=expr(x->callee);if(c.kind!=TypeKind::Function||!c.callable)throw Error(x->pos,"Only a function or method can be called.");sig=c.callable;}
+    std::shared_ptr<FunctionSig> sig;if(auto m=std::dynamic_pointer_cast<ast::Member>(x->callee))sig=member_call(expr(m->value),m->name,m->pos);else{auto c=expr(x->callee);if(c.kind!=TypeKind::Function)throw Error(x->pos,"Only a function or method can be called.");if(!c.callable){for(auto& arg:x->args)(void)expr(arg);return TypeInfo{};}sig=c.callable;}
     if((!sig->variadic&&x->args.size()!=sig->params.size())||(sig->variadic&&x->args.size()<sig->min_args))throw Error(x->pos,"This call needs "+std::to_string(sig->variadic?sig->min_args:sig->params.size())+(sig->variadic?" or more":"")+" values, but got "+std::to_string(x->args.size())+".");
     std::unordered_map<std::string,TypeInfo> generic_bindings;
     for(std::size_t i=0;i<x->args.size();++i){
@@ -209,6 +209,7 @@ void Checker::stmt(const ast::StmtPtr& s){
   if(auto x=std::dynamic_pointer_cast<ast::For>(s)){auto c=expr(x->values);scopes_.push_back({});if(c.kind==TypeKind::Map){if(x->names.size()>2)throw Error(x->pos,"A Map loop uses at most key and value.");scopes_.back()[x->names[0]]=TypeInfo(TypeKind::Text);if(x->names.size()==2)scopes_.back()[x->names[1]]=c.value?*c.value:TypeInfo{};}else if(c.kind==TypeKind::List||c.kind==TypeKind::Set){if(x->names.size()!=1)throw Error(x->pos,"List and Set loops use one loop name.");scopes_.back()[x->names[0]]=c.element?*c.element:TypeInfo{};}else throw Error(x->pos,"for needs a List, Set, Map, or range after 'in'.");for(auto& i:x->body)stmt(i);scopes_.pop_back();return;}
   if(auto x=std::dynamic_pointer_cast<ast::While>(s)){auto t=expr(x->condition);if(t.kind!=TypeKind::Bool&&t.kind!=TypeKind::Unknown)throw Error(x->pos,"while needs a Bool condition.");block(x->body);return;}
   if(auto x=std::dynamic_pointer_cast<ast::Function>(s)){
+    if(!scopes_.back().contains(x->name)){auto nested=std::make_shared<FunctionSig>();configure_signature(*x,nested);TypeInfo ft(TypeKind::Function);ft.callable=nested;scopes_.back()[x->name]=ft;}
     auto f=find(x->name,x->pos);auto sig=f.callable;if(!sig){sig=std::make_shared<FunctionSig>();configure_signature(*x,sig);}scopes_.push_back({});for(std::size_t i=0;i<x->params.size();++i)scopes_.back()[x->params[i]]=i<sig->params.size()?sig->params[i]:TypeInfo{};auto old=current_function_;current_function_=sig;++function_depth_;for(auto& i:x->body)stmt(i);--function_depth_;for(std::size_t i=0;i<x->params.size();++i)if(sig->params[i].kind==TypeKind::Unknown)sig->params[i]=scopes_.back()[x->params[i]];if(sig->result.kind==TypeKind::Unknown)sig->result=TypeInfo(TypeKind::None);current_function_=old;scopes_.pop_back();return;
   }
   if(auto x=std::dynamic_pointer_cast<ast::Type>(s)){
