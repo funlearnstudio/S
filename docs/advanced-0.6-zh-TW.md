@@ -1,6 +1,6 @@
 # SE 0.6 進階功能教學
 
-SE 0.6 的目標是讓高階程式設計仍維持 **Simple at every level**。這一版把函式值、高階 collections、泛型函式、模式匹配、Task、Option / Result、檔案型資料庫與 HTTPS 加入既有語言。
+SE 0.6 的目標是讓高階程式設計仍維持 **Simple at every level**。這一版把函式值、高階 collections、lexical closure、泛型函式、模式匹配、Task、Option / Result、檔案型資料庫與 HTTPS 加入既有語言。
 
 > 本文件描述實際實作。SE 0.6 的泛型目前是「泛型函式」，還不是完整的 generic type / trait 系統；HTTPS 使用系統 `curl` 作 TLS transport；資料庫是內建的輕量檔案型 Text key/value database，不宣稱取代 SQLite/PostgreSQL。
 
@@ -32,15 +32,27 @@ total = collections.reduce nums 0 add
 
 ## 2. sort by key / callback sort
 
-Map 或 object 可以依欄位排序：
+Object 可以依 field 排序：
 
 ```se
-users = [["name": "B", "score": 20], ["name": "A", "score": 10]]
-ordered = collections.sort_by users "score"
-desc = collections.sort_by_desc users "score"
+type Score
+    name = ""
+    points = 0
+
+first = Score
+    name = "B"
+    points = 20
+
+second = Score
+    name = "A"
+    points = 10
+
+scores = [first, second]
+ordered = collections.sort_by scores "points"
+desc = collections.sort_by_desc scores "points"
 ```
 
-也可自行提供比較函式：
+也可以對只有同型 value 的 Map List 依 key 排序，或自行提供比較函式：
 
 ```se
 make before a b
@@ -62,9 +74,9 @@ rest = collections.drop nums 2
 
 `slice` 採 `[start, end)`，end 不包含在結果裡，也支援負 index。
 
-## 4. Function values、closure 與 lambda 的 SE 替代
+## 4. Function values、真正的 lexical closure 與 lambda 的 SE 替代
 
-SE 不要求加入大量 lambda punctuation。一般做法是先用 `make` 建立清楚的小函式，再把函式當成 value 傳遞。
+SE 不要求加入大量 lambda punctuation。一般做法是用短小的 `make` 函式直接當 function value。
 
 ```se
 make double n
@@ -73,7 +85,22 @@ make double n
 values = collections.map [1, 2, 3] double
 ```
 
-需要 capture / partial application 時使用 `function.bind`：
+巢狀 `make` 會捕捉外層 lexical environment，因此可以建立真正 closure：
+
+```se
+make make_adder base
+    make inner value
+        give base + value
+    give inner
+
+add10 = make_adder 10
+answer = add10 5
+say answer
+```
+
+`inner` 在 `make_adder` 已經結束後仍記得 `base`。這就是 SE 對常見 lambda/capture 使用情境的低標點做法。
+
+若只是 partial application，也可以使用 `function.bind`：
 
 ```se
 use function
@@ -85,8 +112,6 @@ add10 = function.bind add 10
 answer = function.call add10 5
 say answer
 ```
-
-`add10` 是會記住 `10` 的新 callable，因此提供真正的 captured function / closure 行為，而不需要寫 `lambda x: ...`。
 
 `function.pipe` 可把值依序傳入多個單參數函式：
 
@@ -184,27 +209,7 @@ value = result.or problem 0
 
 API：`ok`、`err`、`is_ok`、`is_err`、`value`、`error`、`or`。
 
-## 9. Match helpers for Option / Result
-
-除了語言層的 `match` statement，`use match` 還提供 function-oriented helpers，方便把 handlers 傳進去。
-
-```se
-use match
-use option
-
-make got value
-    say value
-
-make missing
-    say "none"
-
-value = option.some "SE"
-match.option value got missing
-```
-
-`match.result` 同理，可分別處理 ok value 與 error text。
-
-## 10. async / await 的 SE 版本
+## 9. async / await 的 SE 版本
 
 ```se
 use async
@@ -223,9 +228,9 @@ else err
 
 `async.run` 立即回傳 managed `Task`，`async.ready task` 可檢查完成狀態，`async.await task` 取得結果並傳遞 task failure。
 
-目前 SE interpreter 為了安全會序列化進入 VM 的 callback，所以這一版提供的是安全的 Task / await 模型，不宣稱 SE bytecode 已經具備無限制平行執行能力。
+目前 SE interpreter 為了安全會序列化進入 VM 的 callback，所以這一版提供的是安全的 Task / await 模型，不宣稱 SE VM 已經具備無限制平行執行能力。
 
-## 11. Database API
+## 10. Database API
 
 ```se
 use db
@@ -253,9 +258,9 @@ try db.save store
 
 資料庫是 SE runtime 提供的持久化 Text key/value store。資料寫在本機檔案，適合設定、小型工具、教學與簡單應用。大型 relational database、SQL、transaction isolation、indexes 等不屬於這個 API 的宣稱範圍。
 
-## 12. HTTPS
+## 11. HTTPS
 
-SE 0.5 的 socket HTTP client 只處理 plain HTTP。SE 0.6 增加真正 TLS HTTPS transport：
+SE 0.5 的 socket HTTP client 只處理 plain HTTP。SE 0.6 增加 TLS HTTPS transport：
 
 ```se
 use https
@@ -285,15 +290,14 @@ else err
     say err.message
 ```
 
-TLS transport 目前使用系統 `curl`，因此 `curl` 必須在 PATH。這樣能使用成熟 TLS / certificate validation，而不是自己實作危險的加密協定。
+TLS transport 目前使用系統 `curl`，因此 `curl` 必須在 PATH。這讓 SE 直接使用成熟的 TLS / certificate validation，而不是自行重新實作 TLS 協定。
 
-## 13. 組合起來
+## 12. 組合起來
 
 SE 0.6 可以把這些能力串在一起：
 
 ```se
 use collections
-use function
 use async
 use option
 use result
