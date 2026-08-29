@@ -20,6 +20,7 @@ if(MSVC)
 else()
   target_compile_options(s_core PRIVATE -Wall -Wextra -Wpedantic -Werror)
   set_source_files_properties(src/runtime/platform.cpp PROPERTIES COMPILE_DEFINITIONS S_PLATFORM_IMPL COMPILE_OPTIONS "-Wno-misleading-indentation")
+  set_source_files_properties(src/runtime/advanced.cpp src/interpreter/interpreter.cpp src/type/checker.cpp PROPERTIES COMPILE_OPTIONS "-Wno-misleading-indentation")
 endif()
 
 add_executable(se src/main.cpp)
