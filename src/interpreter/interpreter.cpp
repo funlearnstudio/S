@@ -44,8 +44,11 @@ std::shared_ptr<ModuleData> Interpreter::builtin_module(const std::string&name){
 }
 
 Value Interpreter::call(Value c,const std::vector<Value>&args,SourcePos p){
-  auto f=std::get_if<std::shared_ptr<CallableData>>(&c.data());if(!f)throw Error(p,"Only a function or method can be called.");
-  if((!(*f)->variadic&&args.size()!=(*f)->min_args)||((*f)->variadic&&args.size()<(*f)->min_args))throw Error(p,"'"+(*f)->name+"' needs "+std::to_string((*f)->min_args)+((*f)->variadic?" or more":"")+" values, but got "+std::to_string(args.size())+".");return (*f)->call(args,p);
+  auto f=std::get_if<std::shared_ptr<CallableData>>(&c.data());
+  if(!f)throw Error(p,"Only a function or method can be called.");
+  if((!(*f)->variadic&&args.size()!=(*f)->min_args)||((*f)->variadic&&args.size()<(*f)->min_args))
+    throw Error(p,"'"+(*f)->name+"' needs "+std::to_string((*f)->min_args)+((*f)->variadic?" or more":"")+" values, but got "+std::to_string(args.size())+".");
+  return (*f)->call(args,p);
 }
 
 Value Interpreter::instantiate(const std::shared_ptr<TypeData>&type,SourcePos p){
@@ -93,7 +96,7 @@ Value Interpreter::evaluate(const ast::ExprPtr& e){
   if(auto x=std::dynamic_pointer_cast<ast::Binary>(e)){auto a=evaluate(x->left);if(x->op==TokenKind::And&&!a.truth(x->pos))return false;if(x->op==TokenKind::Or&&a.truth(x->pos))return true;return binary(x->op,a,evaluate(x->right),x->pos);}
   if(auto x=std::dynamic_pointer_cast<ast::List>(e)){auto l=std::make_shared<ListData>();for(auto&i:x->items)l->items.push_back(evaluate(i));return l;}
   if(auto x=std::dynamic_pointer_cast<ast::Set>(e)){auto s=std::make_shared<SetData>();for(auto&i:x->items){auto v=evaluate(i);bool found=false;for(auto&old:s->items)if(value_equal(old,v)){found=true;break;}if(!found)s->items.push_back(std::move(v));}return s;}
-  if(auto x=std::dynamic_pointer_cast<ast::Map>(e)){auto m=std::make_shared<MapData>();for(auto&i:x->items){auto k=evaluate(i.first);if(!std::holds_alternative<std::string>(k.data()))throw Error(i.first->pos,"Map keys are Text in S 0.2.");auto key=std::get<std::string>(k.data()),v=evaluate(i.second);auto old=std::find_if(m->items.begin(),m->items.end(),[&](auto&q){return q.first==key;});if(old==m->items.end())m->items.emplace_back(std::move(key),std::move(v));else old->second=std::move(v);}return m;}
+  if(auto x=std::dynamic_pointer_cast<ast::Map>(e)){auto m=std::make_shared<MapData>();for(auto&i:x->items){auto k=evaluate(i.first);if(!std::holds_alternative<std::string>(k.data()))throw Error(i.first->pos,"Map keys are Text in S 0.2.");auto key=std::get<std::string>(k.data());auto v=evaluate(i.second);auto old=std::find_if(m->items.begin(),m->items.end(),[&](auto&q){return q.first==key;});if(old==m->items.end())m->items.emplace_back(std::move(key),std::move(v));else old->second=std::move(v);}return m;}
   if(auto x=std::dynamic_pointer_cast<ast::Range>(e)){auto a=evaluate(x->start),b=evaluate(x->end);if(!std::holds_alternative<std::int64_t>(a.data())||!std::holds_alternative<std::int64_t>(b.data()))throw Error(x->pos,"A range needs two Int values.");auto l=std::make_shared<ListData>();auto from=std::get<std::int64_t>(a.data()),to=std::get<std::int64_t>(b.data());auto step=from<=to?1:-1;for(auto n=from;;n+=step){l->items.emplace_back(n);if(n==to)break;}return l;}
   if(auto x=std::dynamic_pointer_cast<ast::Index>(e)){auto v=evaluate(x->value),i=evaluate(x->index);if(auto l=std::get_if<std::shared_ptr<ListData>>(&v.data())){if(!std::holds_alternative<std::int64_t>(i.data()))throw Error(x->pos,"A List index needs Int.");auto n=std::get<std::int64_t>(i.data());if(n<0||static_cast<std::size_t>(n)>=(*l)->items.size())throw Error(x->pos,"List index "+std::to_string(n)+" is out of bounds. This list has "+std::to_string((*l)->items.size())+" items.");return (*l)->items[static_cast<std::size_t>(n)];}if(auto m=std::get_if<std::shared_ptr<MapData>>(&v.data())){if(!std::holds_alternative<std::string>(i.data()))throw Error(x->pos,"A Map key needs Text.");auto key=std::get<std::string>(i.data());for(auto&q:(*m)->items)if(q.first==key)return q.second;throw Error(x->pos,"Map has no key '"+key+"'.");}throw Error(x->pos,"Only List and Map can use [index].");}
   if(auto x=std::dynamic_pointer_cast<ast::Member>(e))return member(evaluate(x->value),x->name,x->pos,true);
@@ -121,7 +124,8 @@ void Interpreter::execute(const ast::StmtPtr& s){
 }
 
 std::shared_ptr<ModuleData> Interpreter::run_module(const ast::Module&m){
-  if(m.builtin)return builtin_module(m.name);if(m.native)return load_native_module(m);
+  if(m.builtin)return builtin_module(m.name);
+  if(m.native)return load_native_module(m);
   auto old=env_;auto old_source=source_;auto local=std::make_shared<Environment>();env_=local;source_=m.path;install_builtins(local);
   for(auto&s:m.statements)if(auto u=std::dynamic_pointer_cast<ast::Use>(s)){auto d=modules_.find(u->name);if(d==modules_.end())throw Error(u->pos,"Module '"+u->name+"' was not loaded.");if(u->name=="file"||u->name=="path"||u->name=="time")local->define(u->name,d->second);else for(auto&[n,v]:d->second->exports){if(local->has(n))throw Error(u->pos,"The name '"+n+"' is provided by more than one module.");local->define(n,v);}}
   try{for(auto&s:m.statements)execute(s);}catch(...){env_=old;source_=old_source;throw;}
