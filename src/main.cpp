@@ -26,10 +26,6 @@ std::vector<std::filesystem::path> source_files(const std::filesystem::path&root
   if(std::filesystem::is_regular_file(root)){if(is_se_source(root))out.push_back(root);return out;}
   if(!std::filesystem::exists(root))throw std::runtime_error("Path does not exist: "+root.string());
   for(const auto&entry:std::filesystem::recursive_directory_iterator(root)){
-    if(entry.is_directory()){
-      auto name=entry.path().filename().string();
-      if(name==".git"||name=="build"||name=="node_modules")continue;
-    }
     if(entry.is_regular_file()&&is_se_source(entry.path()))out.push_back(entry.path());
   }
   std::sort(out.begin(),out.end());
@@ -55,16 +51,17 @@ void print_help(){
     "  se build file.se               Build a native executable\n"
     "  se bind module.sbind [dir]     Generate C ABI bindings\n"
     "  se new app NAME                Create a normal SE application\n"
-    "  se new web NAME                Create an SE + HTML/CSS/JS/TS web project\n"
+    "  se new web NAME                Create an SE web/API + HTML/CSS/JS/TS project\n"
     "  se doctor                      Show local toolchain diagnostics\n"
     "  se help                        Show this help\n"
     "  se --version                   Show the SE version\n\n"
+    "Built-in platform modules: json, text, collections, test, process, http, web, js, ts.\n"
     "Source files use .se. Legacy .s files are still accepted during migration.\n";
 }
 
 int doctor_command(){
   std::cout<<"SE doctor\n";
-  std::cout<<"  version: SE 0.4.0-dev\n";
+  std::cout<<"  version: SE 0.5.0-dev\n";
 #ifdef _WIN32
   std::cout<<"  platform: Windows\n";
 #elif __APPLE__
@@ -79,6 +76,8 @@ int doctor_command(){
   if(const char*home=std::getenv("SE_HOME"))std::cout<<"  SE_HOME: "<<home<<"\n";
   else if(const char*legacy=std::getenv("S_HOME"))std::cout<<"  S_HOME: "<<legacy<<" (legacy)\n";
   else std::cout<<"  package home: default search paths\n";
+  std::cout<<"  Node bridge: requires node on PATH for use js\n";
+  std::cout<<"  TypeScript bridge: requires ts-node/tsc on PATH for use ts\n";
   std::cout<<"  current directory: "<<std::filesystem::current_path().string()<<"\n";
   std::cout<<"Doctor finished. Use 'se check file.se' or 'se check-all .' for source diagnostics.\n";
   return 0;
@@ -132,7 +131,7 @@ int new_project(const std::string&kind,const std::filesystem::path&root){
   std::filesystem::create_directories(root);
   if(kind=="app"){
     write_new_file(root/"src/main.se","say \"Hello from SE\"\n");
-    write_new_file(root/"tests/main_test.se","value = 2 + 2\nif value != 4\n    fail \"2 + 2 should be 4\"\n");
+    write_new_file(root/"tests/main_test.se","use test\n\nvalue = 2 + 2\ntest.equal value 4\n");
     write_new_file(root/"README.md","# "+root.filename().string()+"\n\nRun:\n\n```sh\nse run src/main.se\n```\n\nCheck the project:\n\n```sh\nse check-all .\n```\n\nRun tests:\n\n```sh\nse test .\n```\n\nBuild:\n\n```sh\nse build src/main.se\n```\n");
     std::cout<<"Created SE app at "<<root.string()<<"\n";
     std::cout<<"Next: cd "<<root.string()<<" && se check-all . && se test . && se run src/main.se\n";
@@ -140,19 +139,58 @@ int new_project(const std::string&kind,const std::filesystem::path&root){
   }
   if(kind=="web"){
     write_new_file(root/"backend/main.se",
-      "# SE backend entry point.\n"
-      "# The HTTP runtime is being built on top of this project layout.\n"
-      "say \"SE web backend ready\"\n");
-    write_new_file(root/"backend/tests/backend_test.se","value = 1 + 1\nif value != 2\n    fail \"backend math check failed\"\n");
+      "use web\n"
+      "use json\n\n"
+      "make home body\n"
+      "    give \"Hello from SE Web\"\n\n"
+      "make hello body\n"
+      "    name = web.param \"name\"\n"
+      "    data = [\"message\": \"Hello \" + name, \"received\": body]\n"
+      "    payload = json.stringify data\n"
+      "    give web.json payload\n\n"
+      "web.get \"/\" home\n"
+      "web.get \"/api/hello/:name\" hello\n\n"
+      "say \"SE web server: http://localhost:8080\"\n"
+      "try web.listen 8080\n");
+    write_new_file(root/"backend/tests/backend_test.se",
+      "use web\nuse json\nuse test\n\n"
+      "make hello body\n"
+      "    name = web.param \"name\"\n"
+      "    data = [\"message\": \"Hello \" + name]\n"
+      "    payload = json.stringify data\n"
+      "    give web.json payload\n\n"
+      "web.get \"/api/hello/:name\" hello\n"
+      "status = web.handle_status \"GET\" \"/api/hello/SE\" \"\"\n"
+      "body = web.handle \"GET\" \"/api/hello/SE\" \"\"\n"
+      "test.equal status 200\n"
+      "has_name = body != \"\"\n"
+      "test.ok has_name\n");
     write_new_file(root/"frontend/index.html",
-      "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n  <title>SE Web</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <main id=\"app\">Hello from SE Web</main>\n  <script type=\"module\" src=\"./app.js\"></script>\n</body>\n</html>\n");
-    write_new_file(root/"frontend/style.css","body { font-family: system-ui, sans-serif; margin: 2rem; }\n");
-    write_new_file(root/"frontend/app.js","const app = document.querySelector('#app');\nconsole.log('SE Web frontend ready', app);\n");
-    write_new_file(root/"frontend/app.ts","const message: string = 'SE Web TypeScript frontend ready';\nconsole.log(message);\n");
+      "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n  <title>SE Web</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <main>\n    <h1>SE Web</h1>\n    <button id=\"hello\">Call SE backend</button>\n    <pre id=\"output\"></pre>\n  </main>\n  <script type=\"module\" src=\"./app.js\"></script>\n</body>\n</html>\n");
+    write_new_file(root/"frontend/style.css","body { font-family: system-ui, sans-serif; margin: 2rem; }\nbutton { padding: .6rem 1rem; }\npre { margin-top: 1rem; }\n");
+    write_new_file(root/"frontend/se-api.js",
+      "const SE_API = 'http://localhost:8080';\n\n"
+      "async function decode(response) {\n  if (!response.ok) throw new Error(`SE API ${response.status}`);\n  const type = response.headers.get('content-type') || '';\n  return type.includes('application/json') ? response.json() : response.text();\n}\n\n"
+      "export async function seGet(path) {\n  return decode(await fetch(`${SE_API}${path}`));\n}\n\n"
+      "export async function sePost(path, value) {\n  return decode(await fetch(`${SE_API}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) }));\n}\n");
+    write_new_file(root/"frontend/se-api.ts",
+      "const SE_API: string = 'http://localhost:8080';\n\n"
+      "async function decode(response: Response): Promise<unknown> {\n  if (!response.ok) throw new Error(`SE API ${response.status}`);\n  const type = response.headers.get('content-type') ?? '';\n  return type.includes('application/json') ? response.json() : response.text();\n}\n\n"
+      "export async function seGet(path: string): Promise<unknown> {\n  return decode(await fetch(`${SE_API}${path}`));\n}\n\n"
+      "export async function sePost(path: string, value: unknown): Promise<unknown> {\n  return decode(await fetch(`${SE_API}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) }));\n}\n");
+    write_new_file(root/"frontend/app.js",
+      "import { seGet } from './se-api.js';\n\n"
+      "const output = document.querySelector('#output');\n"
+      "document.querySelector('#hello').addEventListener('click', async () => {\n  try { output.textContent = JSON.stringify(await seGet('/api/hello/browser'), null, 2); }\n  catch (error) { output.textContent = String(error); }\n});\n");
+    write_new_file(root/"frontend/app.ts",
+      "import { seGet } from './se-api';\n\n"
+      "const output = document.querySelector<HTMLPreElement>('#output');\n"
+      "async function load(): Promise<void> {\n  const value: unknown = await seGet('/api/hello/typescript');\n  if (output) output.textContent = JSON.stringify(value, null, 2);\n}\n"
+      "void load();\n");
     write_new_file(root/"README.md",
-      "# "+root.filename().string()+"\n\nThis project keeps the SE backend and browser frontend together.\n\n- `backend/main.se` - SE backend entry point\n- `backend/tests/` - SE backend tests\n- `frontend/index.html` - HTML\n- `frontend/style.css` - CSS\n- `frontend/app.js` - JavaScript\n- `frontend/app.ts` - TypeScript source\n\nCheck and test the backend with:\n\n```sh\nse check-all backend\nse test backend\nse run backend/main.se\n```\n\nThe built-in SE HTTP server/API layer is not implemented yet; this template establishes the stable project structure for it.\n");
+      "# "+root.filename().string()+"\n\nSE 0.5 web project with a real SE HTTP API backend and browser bridge.\n\n- `backend/main.se` - SE HTTP server/router\n- `backend/tests/` - in-memory route tests\n- `frontend/index.html` / `style.css` - browser UI\n- `frontend/se-api.js` - JavaScript fetch bridge\n- `frontend/se-api.ts` - typed TypeScript fetch bridge\n\nRun backend:\n\n```sh\nse check-all backend\nse test backend\nse run backend/main.se\n```\n\nThen serve `frontend/` with any static web server and open it in a browser. The SE server listens on port 8080.\n\nThe current built-in server is synchronous and intended for development/small services; the HTTP client currently supports plain `http://`, not TLS/HTTPS.\n");
     std::cout<<"Created SE web project at "<<root.string()<<"\n";
-    std::cout<<"Frontend supports HTML, CSS, JavaScript, and TypeScript files side-by-side with SE.\n";
+    std::cout<<"Run: cd "<<root.string()<<" && se test backend && se run backend/main.se\n";
     return 0;
   }
   throw std::runtime_error("Unknown project kind '"+kind+"'. Use app or web.");
@@ -168,7 +206,7 @@ int file_command(const std::string&cmd,const std::filesystem::path&path){
 #else
     std::filesystem::path root=std::filesystem::current_path();
 #endif
-    std::string command=compiler+" -std=c++20 -O2 -Wall -Wextra -Wpedantic -Werror -I"+shell_quote((root/"include").string())+" "+shell_quote(cpp_path.string())+" "+shell_quote((root/"src/runtime/error.cpp").string())+" "+shell_quote((root/"src/runtime/value.cpp").string())+" "+shell_quote((root/"src/interpreter/interpreter.cpp").string())+" "+shell_quote((root/"src/ffi/ffi.cpp").string())+" -pthread";
+    std::string command=compiler+" -std=c++20 -O2 -Wall -Wextra -Wpedantic -Werror -Wno-misleading-indentation -I"+shell_quote((root/"include").string())+" "+shell_quote(cpp_path.string())+" "+shell_quote((root/"src/runtime/error.cpp").string())+" "+shell_quote((root/"src/runtime/value.cpp").string())+" "+shell_quote((root/"src/runtime/platform.cpp").string())+" "+shell_quote((root/"src/interpreter/interpreter.cpp").string())+" "+shell_quote((root/"src/ffi/ffi.cpp").string())+" -pthread";
 #ifdef __linux__
     command+=" -ldl";
 #endif
@@ -185,7 +223,7 @@ int bind_command(const std::filesystem::path&definition,const std::filesystem::p
   }catch(const s::Error&e){std::string source;try{source=read_file(definition);}catch(...){ }std::cerr<<s::format_error(e,source);return 1;}
 }
 void repl(){
-  std::cout<<"SE 0.4.0-dev\nType SE code. Use a blank line to finish a block. Ctrl-D exits.\n";
+  std::cout<<"SE 0.5.0-dev\nType SE code. Use a blank line to finish a block. Ctrl-D exits.\n";
   std::string pending,line; s::Checker checker; s::Interpreter vm(std::cin,std::cout);
   auto execute=[&]{if(pending.empty())return;try{s::Lexer lexer(pending);s::Parser parser(lexer.scan());auto program=parser.parse();checker.check(program);vm.run(program);}catch(const s::Error&e){std::cerr<<s::format_error(e,pending);}catch(const s::RuntimeFailure&e){std::cerr<<e.what()<<'\n';}pending.clear();};
   while(true){std::cout<<(pending.empty()?"> ":". ");if(!std::getline(std::cin,line)){execute();break;}if(line.empty()&&!pending.empty()){execute();continue;}pending+=line+'\n';if(line.find_first_not_of(' ')==0&&line.rfind("if ",0)!=0&&line.rfind("for ",0)!=0&&line.rfind("while ",0)!=0&&line.rfind("repeat ",0)!=0&&line.rfind("make ",0)!=0&&line.rfind("type ",0)!=0&&line!="try")execute();}
@@ -194,7 +232,7 @@ void repl(){
 int main(int argc,char**argv){
   try{
     if(argc==1){repl();return 0;}
-    if(argc==2&&std::string(argv[1])=="--version"){std::cout<<"SE 0.4.0-dev\n";return 0;}
+    if(argc==2&&std::string(argv[1])=="--version"){std::cout<<"SE 0.5.0-dev\n";return 0;}
     if(argc==2&&(std::string(argv[1])=="help"||std::string(argv[1])=="--help"||std::string(argv[1])=="-h")){print_help();return 0;}
     if(argc==2&&std::string(argv[1])=="doctor")return doctor_command();
     if((argc==2||argc==3)&&std::string(argv[1])=="check-all")return check_all_command(argc==3?std::filesystem::path(argv[2]):std::filesystem::path("."));
