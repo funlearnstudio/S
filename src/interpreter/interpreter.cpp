@@ -5,6 +5,7 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 #include <thread>
 
 namespace s {
@@ -14,6 +15,31 @@ std::shared_ptr<CallableData> callable(std::string name,std::size_t min,std::siz
   auto c=std::make_shared<CallableData>();
   c->name=std::move(name);c->min_args=min;c->max_args=max;c->variadic=variadic;c->call=std::move(f);
   return c;
+}
+std::string help_text(const Value&v){
+  std::ostringstream out;
+  out<<v.type_name()<<"\n";
+  if(std::holds_alternative<std::string>(v.data()))out<<"members: help, len, upper, lower\nexample: text.upper";
+  else if(std::holds_alternative<std::shared_ptr<ByteBufferData>>(v.data()))out<<"members: help, len";
+  else if(std::holds_alternative<std::shared_ptr<ListData>>(v.data()))out<<"members: help, len, add value, remove value\nexample: nums.add 4";
+  else if(std::holds_alternative<std::shared_ptr<MapData>>(v.data()))out<<"members: help, len\nindex with map[\"key\"]";
+  else if(std::holds_alternative<std::shared_ptr<SetData>>(v.data()))out<<"members: help, len, add value, remove value";
+  else if(auto o=std::get_if<std::shared_ptr<ObjectData>>(&v.data())){
+    out<<"members: help";
+    if((*o)->type){
+      for(auto&[name,value]:(*o)->fields){(void)value;out<<", "<<name;}
+      for(auto&[name,method]:(*o)->type->methods){(void)method;out<<", "<<name;}
+    }
+  }else if(auto m=std::get_if<std::shared_ptr<ModuleData>>(&v.data())){
+    out<<"members: help";
+    for(auto&[name,value]:(*m)->exports){(void)value;out<<", "<<name;}
+  }else if(std::holds_alternative<std::shared_ptr<FileData>>(v.data()))out<<"members: help, read, write text, close";
+  else if(std::holds_alternative<PathData>(v.data()))out<<"members: help, name, ext, parent, exists, is_file, is_dir";
+  else if(std::holds_alternative<std::shared_ptr<ErrorData>>(v.data()))out<<"members: help, message, source, line, kind";
+  else if(std::holds_alternative<DurationData>(v.data()))out<<"members: help\nuse with wait duration";
+  else if(std::holds_alternative<TimeData>(v.data()))out<<"members: help";
+  else out<<"members: help";
+  return out.str();
 }
 }
 
@@ -67,6 +93,7 @@ Value Interpreter::instantiate(const std::shared_ptr<TypeData>&type,SourcePos p)
 }
 
 Value Interpreter::member(Value v,const std::string&name,SourcePos p,bool auto_call){
+  if(name=="help")return help_text(v);
   if(name=="len"){
     if(auto t=std::get_if<std::string>(&v.data()))return static_cast<std::int64_t>(t->size());
     if(auto b=std::get_if<std::shared_ptr<ByteBufferData>>(&v.data()))return static_cast<std::int64_t>((*b)->bytes.size());
@@ -96,7 +123,7 @@ Value Interpreter::member(Value v,const std::string&name,SourcePos p,bool auto_c
   }
   if(auto q=std::get_if<PathData>(&v.data())){if(name=="name")return q->path.filename().string();if(name=="ext")return q->path.extension().string();if(name=="parent")return PathData{q->path.parent_path()};if(name=="exists")return std::filesystem::exists(q->path);if(name=="is_file")return std::filesystem::is_regular_file(q->path);if(name=="is_dir")return std::filesystem::is_directory(q->path);}
   if(auto e=std::get_if<std::shared_ptr<ErrorData>>(&v.data())){if(name=="message")return (*e)->message;if(name=="source")return (*e)->source;if(name=="line")return static_cast<std::int64_t>((*e)->line);if(name=="kind")return (*e)->kind;}
-  throw Error(p,v.type_name()+" has no member named '"+name+"'.");
+  throw Error(p,v.type_name()+" has no member named '"+name+"'.","Use value.help to see the members available on this value.");
 }
 
 Value Interpreter::evaluate(const ast::ExprPtr& e){
@@ -107,7 +134,7 @@ Value Interpreter::evaluate(const ast::ExprPtr& e){
   if(auto x=std::dynamic_pointer_cast<ast::Binary>(e)){auto a=evaluate(x->left);if(x->op==TokenKind::And&&!a.truth(x->pos))return false;if(x->op==TokenKind::Or&&a.truth(x->pos))return true;return binary(x->op,a,evaluate(x->right),x->pos);}
   if(auto x=std::dynamic_pointer_cast<ast::List>(e)){auto l=std::make_shared<ListData>();for(auto&i:x->items)l->items.push_back(evaluate(i));return l;}
   if(auto x=std::dynamic_pointer_cast<ast::Set>(e)){auto s=std::make_shared<SetData>();for(auto&i:x->items){auto v=evaluate(i);bool found=false;for(auto&old:s->items)if(value_equal(old,v)){found=true;break;}if(!found)s->items.push_back(std::move(v));}return s;}
-  if(auto x=std::dynamic_pointer_cast<ast::Map>(e)){auto m=std::make_shared<MapData>();for(auto&i:x->items){auto k=evaluate(i.first);if(!std::holds_alternative<std::string>(k.data()))throw Error(i.first->pos,"Map keys are Text in S 0.2.");auto key=std::get<std::string>(k.data());auto v=evaluate(i.second);auto old=std::find_if(m->items.begin(),m->items.end(),[&](auto&q){return q.first==key;});if(old==m->items.end())m->items.emplace_back(std::move(key),std::move(v));else old->second=std::move(v);}return m;}
+  if(auto x=std::dynamic_pointer_cast<ast::Map>(e)){auto m=std::make_shared<MapData>();for(auto&i:x->items){auto k=evaluate(i.first);if(!std::holds_alternative<std::string>(k.data()))throw Error(i.first->pos,"Map keys are Text in SE.");auto key=std::get<std::string>(k.data());auto v=evaluate(i.second);auto old=std::find_if(m->items.begin(),m->items.end(),[&](auto&q){return q.first==key;});if(old==m->items.end())m->items.emplace_back(std::move(key),std::move(v));else old->second=std::move(v);}return m;}
   if(auto x=std::dynamic_pointer_cast<ast::Range>(e)){auto a=evaluate(x->start),b=evaluate(x->end);if(!std::holds_alternative<std::int64_t>(a.data())||!std::holds_alternative<std::int64_t>(b.data()))throw Error(x->pos,"A range needs two Int values.");auto l=std::make_shared<ListData>();auto from=std::get<std::int64_t>(a.data()),to=std::get<std::int64_t>(b.data());auto step=from<=to?1:-1;for(auto n=from;;n+=step){l->items.emplace_back(n);if(n==to)break;}return l;}
   if(auto x=std::dynamic_pointer_cast<ast::Index>(e)){auto v=evaluate(x->value),i=evaluate(x->index);if(auto l=std::get_if<std::shared_ptr<ListData>>(&v.data())){if(!std::holds_alternative<std::int64_t>(i.data()))throw Error(x->pos,"A List index needs Int.");auto n=std::get<std::int64_t>(i.data());if(n<0||static_cast<std::size_t>(n)>=(*l)->items.size())throw Error(x->pos,"List index "+std::to_string(n)+" is out of bounds. This list has "+std::to_string((*l)->items.size())+" items.");return (*l)->items[static_cast<std::size_t>(n)];}if(auto m=std::get_if<std::shared_ptr<MapData>>(&v.data())){if(!std::holds_alternative<std::string>(i.data()))throw Error(x->pos,"A Map key needs Text.");auto key=std::get<std::string>(i.data());for(auto&q:(*m)->items)if(q.first==key)return q.second;throw Error(x->pos,"Map has no key '"+key+"'.");}throw Error(x->pos,"Only List and Map can use [index].");}
   if(auto x=std::dynamic_pointer_cast<ast::Member>(e))return member(evaluate(x->value),x->name,x->pos,true);
@@ -120,7 +147,7 @@ Value Interpreter::evaluate(const ast::ExprPtr& e){
 void Interpreter::execute(const ast::StmtPtr& s){
   if(std::dynamic_pointer_cast<ast::Use>(s))return;
   if(auto x=std::dynamic_pointer_cast<ast::Say>(s)){out_<<evaluate(x->value).text()<<'\n';return;}
-  if(auto x=std::dynamic_pointer_cast<ast::ExprStmt>(s)){evaluate(x->value);return;}
+  if(auto x=std::dynamic_pointer_cast<ast::ExprStmt>(s)){auto value=evaluate(x->value);if(auto m=std::dynamic_pointer_cast<ast::Member>(x->value);m&&m->name=="help")out_<<value.text()<<'\n';return;}
   if(auto x=std::dynamic_pointer_cast<ast::Assign>(s)){auto v=evaluate(x->value);if(auto n=std::dynamic_pointer_cast<ast::Variable>(x->target)){env_->set(n->name,v);if(!x->init.empty()){auto o=std::get_if<std::shared_ptr<ObjectData>>(&v.data());if(!o)throw Error(x->pos,"Indented initialization needs an object.");execute_block(x->init,std::make_shared<Environment>(env_,*o));}return;}if(auto m=std::dynamic_pointer_cast<ast::Member>(x->target)){auto owner=evaluate(m->value);auto o=std::get_if<std::shared_ptr<ObjectData>>(&owner.data());if(!o||!(*o)->fields.contains(m->name))throw Error(x->pos,"Unknown object field '"+m->name+"'.");(*o)->fields[m->name]=v;return;}if(auto i=std::dynamic_pointer_cast<ast::Index>(x->target)){auto c=evaluate(i->value),k=evaluate(i->index);if(auto l=std::get_if<std::shared_ptr<ListData>>(&c.data())){if(!std::holds_alternative<std::int64_t>(k.data()))throw Error(x->pos,"A List index needs Int.");auto n=std::get<std::int64_t>(k.data());if(n<0||static_cast<std::size_t>(n)>=(*l)->items.size())throw Error(x->pos,"List index is out of bounds.");(*l)->items[static_cast<std::size_t>(n)]=v;return;}if(auto mp=std::get_if<std::shared_ptr<MapData>>(&c.data())){if(!std::holds_alternative<std::string>(k.data()))throw Error(x->pos,"A Map key needs Text.");auto key=std::get<std::string>(k.data());for(auto&q:(*mp)->items)if(q.first==key){q.second=v;return;}(*mp)->items.emplace_back(key,v);return;}throw Error(x->pos,"Only List or Map items can be assigned by index.");}throw Error(x->pos,"You can only assign to a name, field, or collection item.");}
   if(auto x=std::dynamic_pointer_cast<ast::If>(s)){execute_block(evaluate(x->condition).truth(x->pos)?x->then_block:x->else_block,std::make_shared<Environment>(env_));return;}
   if(auto x=std::dynamic_pointer_cast<ast::Repeat>(s)){auto n=evaluate(x->count);if(!std::holds_alternative<std::int64_t>(n.data()))throw Error(x->pos,"repeat needs an Int count.");auto count=std::get<std::int64_t>(n.data());if(count<0)throw Error(x->pos,"repeat count cannot be negative.");for(std::int64_t i=0;i<count;++i)execute_block(x->body,std::make_shared<Environment>(env_));return;}
