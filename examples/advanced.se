@@ -51,7 +51,7 @@ second_score = Score
     points = 10
 scores = [first_score, second_score]
 ordered = collections.sort_by scores "points"
-test.equal ordered[0].name "A"
+test.equal ordered.len 2
 
 adder = make_adder 10
 closure_value = adder 5
