@@ -6,7 +6,7 @@
 #include <vector>
 
 namespace s {
-enum class TypeKind { Unknown, None, Int, Num, Text, Bool, List, Map, Set, Function, Object, Module, Error, Duration, Time, Path, File, NativeHandle };
+enum class TypeKind { Unknown, None, Int, Num, Text, Bool, Bytes, List, Map, Set, Function, Object, Module, Error, Duration, Time, Path, File, NativeHandle };
 struct FunctionSig;
 struct UserTypeInfo;
 struct TypeInfo {
