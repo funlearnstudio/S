@@ -66,6 +66,8 @@ if(BUILD_TESTING)
   add_test(NAME cli_stdlib COMMAND se run ${CMAKE_SOURCE_DIR}/examples/stdlib.se)
   add_test(NAME cli_help COMMAND se help)
   add_test(NAME cli_doctor COMMAND se doctor)
+  add_test(NAME cli_check_all COMMAND se check-all ${CMAKE_SOURCE_DIR}/examples/project-tests)
+  add_test(NAME cli_project_test COMMAND se test ${CMAKE_SOURCE_DIR}/examples/project-tests)
 
   if(NOT WIN32)
     set_tests_properties(s_tests PROPERTIES ENVIRONMENT "S_NATIVE_PATH=${CMAKE_CURRENT_BINARY_DIR}")
