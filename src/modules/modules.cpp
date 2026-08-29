@@ -48,12 +48,13 @@ ast::Program ModuleLoader::load(const std::filesystem::path& entry){
 std::filesystem::path ModuleLoader::resolve(const std::string& name,const std::filesystem::path& from,bool& builtin,bool& native) const{
   builtin=false;
   native=false;
-  if(name=="file"||name=="path"||name=="time"){
+  if(name=="file"||name=="path"||name=="time"||name=="math"||name=="random"||name=="os"){
     builtin=true;
     return {};
   }
   std::vector<std::filesystem::path> bases{from,root_};
-  if(const char* home=std::getenv("S_HOME")) bases.emplace_back(std::filesystem::path(home)/"packages");
+  if(const char* home=std::getenv("SE_HOME")) bases.emplace_back(std::filesystem::path(home)/"packages");
+  else if(const char* home=std::getenv("S_HOME")) bases.emplace_back(std::filesystem::path(home)/"packages");
 #ifdef S_SOURCE_ROOT
   bases.emplace_back(std::filesystem::path(S_SOURCE_ROOT));
 #endif
@@ -79,7 +80,7 @@ std::size_t ModuleLoader::load_module(const std::string& name,const std::filesys
   std::string key=builtin?"@std/"+name:key_for(path);
   if(auto i=loaded_.find(key);i!=loaded_.end()) return i->second;
   if(!builtin){
-    auto cycle=std::find_if(stack_.begin(),stack_.end(),[&](const auto& p){return key_for(p)==key;});
+    auto cycle=std::find_if(stack_.begin(),stack_.end(),[&](const auto& p){return key_for(p)==key_for(path);});
     if(cycle!=stack_.end()){
       std::string chain;
       for(auto i=cycle;i!=stack_.end();++i){

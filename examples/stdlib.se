@@ -1,0 +1,13 @@
+use math
+use random
+use os
+
+say math.pi
+say math.sqrt 9
+say math.pow 2 8
+say random.int 1 10
+say random.num
+say os.platform
+say os.cwd
+
+math.help

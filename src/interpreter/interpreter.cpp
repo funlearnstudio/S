@@ -3,8 +3,12 @@
 #include <algorithm>
 #include <cctype>
 #include <chrono>
+#include <cmath>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <random>
+#include <sstream>
 #include <thread>
 
 namespace s {
@@ -14,6 +18,55 @@ std::shared_ptr<CallableData> callable(std::string name,std::size_t min,std::siz
   auto c=std::make_shared<CallableData>();
   c->name=std::move(name);c->min_args=min;c->max_args=max;c->variadic=variadic;c->call=std::move(f);
   return c;
+}
+double number_value(const Value&v,SourcePos p,const std::string&name){
+  if(auto n=std::get_if<std::int64_t>(&v.data()))return static_cast<double>(*n);
+  if(auto n=std::get_if<double>(&v.data()))return *n;
+  throw Error(p,name+" needs a number.");
+}
+std::int64_t int_value(const Value&v,SourcePos p,const std::string&name){
+  if(auto n=std::get_if<std::int64_t>(&v.data()))return *n;
+  throw Error(p,name+" needs an Int.");
+}
+std::mt19937_64& random_engine(){
+  static std::mt19937_64 engine{std::random_device{}()};
+  return engine;
+}
+std::string platform_name(){
+#ifdef _WIN32
+  return "windows";
+#elif __APPLE__
+  return "macos";
+#elif __linux__
+  return "linux";
+#else
+  return "unknown";
+#endif
+}
+std::string help_text(const Value&v){
+  std::ostringstream out;
+  out<<v.type_name()<<"\n";
+  if(std::holds_alternative<std::string>(v.data()))out<<"members: help, len, upper, lower\nexample: text.upper";
+  else if(std::holds_alternative<std::shared_ptr<ByteBufferData>>(v.data()))out<<"members: help, len";
+  else if(std::holds_alternative<std::shared_ptr<ListData>>(v.data()))out<<"members: help, len, add value, remove value\nexample: nums.add 4";
+  else if(std::holds_alternative<std::shared_ptr<MapData>>(v.data()))out<<"members: help, len\nindex with map[\"key\"]";
+  else if(std::holds_alternative<std::shared_ptr<SetData>>(v.data()))out<<"members: help, len, add value, remove value";
+  else if(auto o=std::get_if<std::shared_ptr<ObjectData>>(&v.data())){
+    out<<"members: help";
+    if((*o)->type){
+      for(auto&[name,value]:(*o)->fields){(void)value;out<<", "<<name;}
+      for(auto&[name,method]:(*o)->type->methods){(void)method;out<<", "<<name;}
+    }
+  }else if(auto m=std::get_if<std::shared_ptr<ModuleData>>(&v.data())){
+    out<<"members: help";
+    for(auto&[name,value]:(*m)->exports){(void)value;out<<", "<<name;}
+  }else if(std::holds_alternative<std::shared_ptr<FileData>>(v.data()))out<<"members: help, read, write text, close";
+  else if(std::holds_alternative<PathData>(v.data()))out<<"members: help, name, ext, parent, exists, is_file, is_dir";
+  else if(std::holds_alternative<std::shared_ptr<ErrorData>>(v.data()))out<<"members: help, message, source, line, kind";
+  else if(std::holds_alternative<DurationData>(v.data()))out<<"members: help\nuse with wait duration";
+  else if(std::holds_alternative<TimeData>(v.data()))out<<"members: help";
+  else out<<"members: help";
+  return out.str();
 }
 }
 
@@ -50,6 +103,24 @@ std::shared_ptr<ModuleData> Interpreter::builtin_module(const std::string&name){
     m->exports["now"]=callable("time.now",0,0,[](const std::vector<Value>&,SourcePos){return Value(TimeData{std::chrono::system_clock::now()});});
   }else if(name=="file"){
     m->exports["read"]=env_->get("read",{});m->exports["write"]=env_->get("write",{});m->exports["append"]=env_->get("append",{});m->exports["open"]=env_->get("open",{});
+  }else if(name=="math"){
+    m->exports["pi"]=Value(3.14159265358979323846);
+    m->exports["sqrt"]=callable("math.sqrt",1,1,[](const std::vector<Value>&a,SourcePos p){auto n=number_value(a[0],p,"math.sqrt");if(n<0)throw Error(p,"math.sqrt needs a non-negative number.");return Value(std::sqrt(n));});
+    m->exports["abs"]=callable("math.abs",1,1,[](const std::vector<Value>&a,SourcePos p){return Value(std::fabs(number_value(a[0],p,"math.abs")));});
+    m->exports["floor"]=callable("math.floor",1,1,[](const std::vector<Value>&a,SourcePos p){return Value(std::floor(number_value(a[0],p,"math.floor")));});
+    m->exports["ceil"]=callable("math.ceil",1,1,[](const std::vector<Value>&a,SourcePos p){return Value(std::ceil(number_value(a[0],p,"math.ceil")));});
+    m->exports["round"]=callable("math.round",1,1,[](const std::vector<Value>&a,SourcePos p){return Value(std::round(number_value(a[0],p,"math.round")));});
+    m->exports["pow"]=callable("math.pow",2,2,[](const std::vector<Value>&a,SourcePos p){return Value(std::pow(number_value(a[0],p,"math.pow"),number_value(a[1],p,"math.pow")));});
+    m->exports["min"]=callable("math.min",2,2,[](const std::vector<Value>&a,SourcePos p){return Value(std::min(number_value(a[0],p,"math.min"),number_value(a[1],p,"math.min")));});
+    m->exports["max"]=callable("math.max",2,2,[](const std::vector<Value>&a,SourcePos p){return Value(std::max(number_value(a[0],p,"math.max"),number_value(a[1],p,"math.max")));});
+  }else if(name=="random"){
+    m->exports["int"]=callable("random.int",2,2,[](const std::vector<Value>&a,SourcePos p){auto lo=int_value(a[0],p,"random.int"),hi=int_value(a[1],p,"random.int");if(lo>hi)throw Error(p,"random.int needs min <= max.");std::uniform_int_distribution<std::int64_t> d(lo,hi);return Value(d(random_engine()));});
+    m->exports["num"]=callable("random.num",0,0,[](const std::vector<Value>&,SourcePos){std::uniform_real_distribution<double> d(0.0,1.0);return Value(d(random_engine()));});
+  }else if(name=="os"){
+    m->exports["platform"]=Value(platform_name());
+    m->exports["cwd"]=callable("os.cwd",0,0,[](const std::vector<Value>&,SourcePos){return Value(PathData{std::filesystem::current_path()});});
+    m->exports["getenv"]=callable("os.getenv",1,1,[](const std::vector<Value>&a,SourcePos p){auto key=std::get_if<std::string>(&a[0].data());if(!key)throw Error(p,"os.getenv needs Text.");const char*v=std::getenv(key->c_str());return Value(v?std::string(v):std::string{});});
+    m->exports["has_env"]=callable("os.has_env",1,1,[](const std::vector<Value>&a,SourcePos p){auto key=std::get_if<std::string>(&a[0].data());if(!key)throw Error(p,"os.has_env needs Text.");return Value(std::getenv(key->c_str())!=nullptr);});
   }
   return m;
 }
@@ -67,6 +138,7 @@ Value Interpreter::instantiate(const std::shared_ptr<TypeData>&type,SourcePos p)
 }
 
 Value Interpreter::member(Value v,const std::string&name,SourcePos p,bool auto_call){
+  if(name=="help")return help_text(v);
   if(name=="len"){
     if(auto t=std::get_if<std::string>(&v.data()))return static_cast<std::int64_t>(t->size());
     if(auto b=std::get_if<std::shared_ptr<ByteBufferData>>(&v.data()))return static_cast<std::int64_t>((*b)->bytes.size());
@@ -96,7 +168,7 @@ Value Interpreter::member(Value v,const std::string&name,SourcePos p,bool auto_c
   }
   if(auto q=std::get_if<PathData>(&v.data())){if(name=="name")return q->path.filename().string();if(name=="ext")return q->path.extension().string();if(name=="parent")return PathData{q->path.parent_path()};if(name=="exists")return std::filesystem::exists(q->path);if(name=="is_file")return std::filesystem::is_regular_file(q->path);if(name=="is_dir")return std::filesystem::is_directory(q->path);}
   if(auto e=std::get_if<std::shared_ptr<ErrorData>>(&v.data())){if(name=="message")return (*e)->message;if(name=="source")return (*e)->source;if(name=="line")return static_cast<std::int64_t>((*e)->line);if(name=="kind")return (*e)->kind;}
-  throw Error(p,v.type_name()+" has no member named '"+name+"'.");
+  throw Error(p,v.type_name()+" has no member named '"+name+"'.","Use value.help to see the members available on this value.");
 }
 
 Value Interpreter::evaluate(const ast::ExprPtr& e){
@@ -107,7 +179,7 @@ Value Interpreter::evaluate(const ast::ExprPtr& e){
   if(auto x=std::dynamic_pointer_cast<ast::Binary>(e)){auto a=evaluate(x->left);if(x->op==TokenKind::And&&!a.truth(x->pos))return false;if(x->op==TokenKind::Or&&a.truth(x->pos))return true;return binary(x->op,a,evaluate(x->right),x->pos);}
   if(auto x=std::dynamic_pointer_cast<ast::List>(e)){auto l=std::make_shared<ListData>();for(auto&i:x->items)l->items.push_back(evaluate(i));return l;}
   if(auto x=std::dynamic_pointer_cast<ast::Set>(e)){auto s=std::make_shared<SetData>();for(auto&i:x->items){auto v=evaluate(i);bool found=false;for(auto&old:s->items)if(value_equal(old,v)){found=true;break;}if(!found)s->items.push_back(std::move(v));}return s;}
-  if(auto x=std::dynamic_pointer_cast<ast::Map>(e)){auto m=std::make_shared<MapData>();for(auto&i:x->items){auto k=evaluate(i.first);if(!std::holds_alternative<std::string>(k.data()))throw Error(i.first->pos,"Map keys are Text in S 0.2.");auto key=std::get<std::string>(k.data());auto v=evaluate(i.second);auto old=std::find_if(m->items.begin(),m->items.end(),[&](auto&q){return q.first==key;});if(old==m->items.end())m->items.emplace_back(std::move(key),std::move(v));else old->second=std::move(v);}return m;}
+  if(auto x=std::dynamic_pointer_cast<ast::Map>(e)){auto m=std::make_shared<MapData>();for(auto&i:x->items){auto k=evaluate(i.first);if(!std::holds_alternative<std::string>(k.data()))throw Error(i.first->pos,"Map keys are Text in SE.");auto key=std::get<std::string>(k.data());auto v=evaluate(i.second);auto old=std::find_if(m->items.begin(),m->items.end(),[&](auto&q){return q.first==key;});if(old==m->items.end())m->items.emplace_back(std::move(key),std::move(v));else old->second=std::move(v);}return m;}
   if(auto x=std::dynamic_pointer_cast<ast::Range>(e)){auto a=evaluate(x->start),b=evaluate(x->end);if(!std::holds_alternative<std::int64_t>(a.data())||!std::holds_alternative<std::int64_t>(b.data()))throw Error(x->pos,"A range needs two Int values.");auto l=std::make_shared<ListData>();auto from=std::get<std::int64_t>(a.data()),to=std::get<std::int64_t>(b.data());auto step=from<=to?1:-1;for(auto n=from;;n+=step){l->items.emplace_back(n);if(n==to)break;}return l;}
   if(auto x=std::dynamic_pointer_cast<ast::Index>(e)){auto v=evaluate(x->value),i=evaluate(x->index);if(auto l=std::get_if<std::shared_ptr<ListData>>(&v.data())){if(!std::holds_alternative<std::int64_t>(i.data()))throw Error(x->pos,"A List index needs Int.");auto n=std::get<std::int64_t>(i.data());if(n<0||static_cast<std::size_t>(n)>=(*l)->items.size())throw Error(x->pos,"List index "+std::to_string(n)+" is out of bounds. This list has "+std::to_string((*l)->items.size())+" items.");return (*l)->items[static_cast<std::size_t>(n)];}if(auto m=std::get_if<std::shared_ptr<MapData>>(&v.data())){if(!std::holds_alternative<std::string>(i.data()))throw Error(x->pos,"A Map key needs Text.");auto key=std::get<std::string>(i.data());for(auto&q:(*m)->items)if(q.first==key)return q.second;throw Error(x->pos,"Map has no key '"+key+"'.");}throw Error(x->pos,"Only List and Map can use [index].");}
   if(auto x=std::dynamic_pointer_cast<ast::Member>(e))return member(evaluate(x->value),x->name,x->pos,true);
@@ -120,7 +192,7 @@ Value Interpreter::evaluate(const ast::ExprPtr& e){
 void Interpreter::execute(const ast::StmtPtr& s){
   if(std::dynamic_pointer_cast<ast::Use>(s))return;
   if(auto x=std::dynamic_pointer_cast<ast::Say>(s)){out_<<evaluate(x->value).text()<<'\n';return;}
-  if(auto x=std::dynamic_pointer_cast<ast::ExprStmt>(s)){evaluate(x->value);return;}
+  if(auto x=std::dynamic_pointer_cast<ast::ExprStmt>(s)){auto value=evaluate(x->value);if(auto m=std::dynamic_pointer_cast<ast::Member>(x->value);m&&m->name=="help")out_<<value.text()<<'\n';return;}
   if(auto x=std::dynamic_pointer_cast<ast::Assign>(s)){auto v=evaluate(x->value);if(auto n=std::dynamic_pointer_cast<ast::Variable>(x->target)){env_->set(n->name,v);if(!x->init.empty()){auto o=std::get_if<std::shared_ptr<ObjectData>>(&v.data());if(!o)throw Error(x->pos,"Indented initialization needs an object.");execute_block(x->init,std::make_shared<Environment>(env_,*o));}return;}if(auto m=std::dynamic_pointer_cast<ast::Member>(x->target)){auto owner=evaluate(m->value);auto o=std::get_if<std::shared_ptr<ObjectData>>(&owner.data());if(!o||!(*o)->fields.contains(m->name))throw Error(x->pos,"Unknown object field '"+m->name+"'.");(*o)->fields[m->name]=v;return;}if(auto i=std::dynamic_pointer_cast<ast::Index>(x->target)){auto c=evaluate(i->value),k=evaluate(i->index);if(auto l=std::get_if<std::shared_ptr<ListData>>(&c.data())){if(!std::holds_alternative<std::int64_t>(k.data()))throw Error(x->pos,"A List index needs Int.");auto n=std::get<std::int64_t>(k.data());if(n<0||static_cast<std::size_t>(n)>=(*l)->items.size())throw Error(x->pos,"List index is out of bounds.");(*l)->items[static_cast<std::size_t>(n)]=v;return;}if(auto mp=std::get_if<std::shared_ptr<MapData>>(&c.data())){if(!std::holds_alternative<std::string>(k.data()))throw Error(x->pos,"A Map key needs Text.");auto key=std::get<std::string>(k.data());for(auto&q:(*mp)->items)if(q.first==key){q.second=v;return;}(*mp)->items.emplace_back(key,v);return;}throw Error(x->pos,"Only List or Map items can be assigned by index.");}throw Error(x->pos,"You can only assign to a name, field, or collection item.");}
   if(auto x=std::dynamic_pointer_cast<ast::If>(s)){execute_block(evaluate(x->condition).truth(x->pos)?x->then_block:x->else_block,std::make_shared<Environment>(env_));return;}
   if(auto x=std::dynamic_pointer_cast<ast::Repeat>(s)){auto n=evaluate(x->count);if(!std::holds_alternative<std::int64_t>(n.data()))throw Error(x->pos,"repeat needs an Int count.");auto count=std::get<std::int64_t>(n.data());if(count<0)throw Error(x->pos,"repeat count cannot be negative.");for(std::int64_t i=0;i<count;++i)execute_block(x->body,std::make_shared<Environment>(env_));return;}
@@ -138,7 +210,7 @@ std::shared_ptr<ModuleData> Interpreter::run_module(const ast::Module&m){
   if(m.builtin)return builtin_module(m.name);
   if(m.native)return load_native_module(m);
   auto old=env_;auto old_source=source_;auto local=std::make_shared<Environment>();env_=local;source_=m.path;install_builtins(local);
-  for(auto&s:m.statements)if(auto u=std::dynamic_pointer_cast<ast::Use>(s)){auto d=modules_.find(u->name);if(d==modules_.end())throw Error(u->pos,"Module '"+u->name+"' was not loaded.");if(u->name=="file"||u->name=="path"||u->name=="time")local->define(u->name,d->second);else for(auto&[n,v]:d->second->exports){if(local->has(n))throw Error(u->pos,"The name '"+n+"' is provided by more than one module.");local->define(n,v);}}
+  for(auto&s:m.statements)if(auto u=std::dynamic_pointer_cast<ast::Use>(s)){auto d=modules_.find(u->name);if(d==modules_.end())throw Error(u->pos,"Module '"+u->name+"' was not loaded.");if(u->name=="file"||u->name=="path"||u->name=="time"||u->name=="math"||u->name=="random"||u->name=="os")local->define(u->name,d->second);else for(auto&[n,v]:d->second->exports){if(local->has(n))throw Error(u->pos,"The name '"+n+"' is provided by more than one module.");local->define(n,v);}}
   try{for(auto&s:m.statements)execute(s);}catch(...){env_=old;source_=old_source;throw;}
   auto out=std::make_shared<ModuleData>();out->name=m.name;for(auto&s:m.statements){std::string n;if(auto t=std::dynamic_pointer_cast<ast::Type>(s))n=t->name;else if(auto f=std::dynamic_pointer_cast<ast::Function>(s))n=f->name;else if(auto a=std::dynamic_pointer_cast<ast::Assign>(s))if(auto v=std::dynamic_pointer_cast<ast::Variable>(a->target))n=v->name;if(!n.empty()&&n[0]!='_')out->exports[n]=local->get(n,s->pos);}env_=old;source_=old_source;return out;
 }
