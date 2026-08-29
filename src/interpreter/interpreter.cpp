@@ -9,8 +9,12 @@
 
 namespace s {
 namespace {
-struct ReturnSignal{Value value;};
-std::shared_ptr<CallableData> callable(std::string name,std::size_t min,std::size_t max,std::function<Value(const std::vector<Value>&,SourcePos)> f,bool variadic=false){auto c=std::make_shared<CallableData>();c->name=std::move(name);c->min_args=min;c->max_args=max;c->variadic=variadic;c->call=std::move(f);return c;}
+struct ReturnSignal { Value value; };
+std::shared_ptr<CallableData> callable(std::string name,std::size_t min,std::size_t max,std::function<Value(const std::vector<Value>&,SourcePos)> f,bool variadic=false){
+  auto c=std::make_shared<CallableData>();
+  c->name=std::move(name);c->min_args=min;c->max_args=max;c->variadic=variadic;c->call=std::move(f);
+  return c;
+}
 }
 
 Interpreter::Interpreter(std::istream& i,std::ostream& o):in_(i),out_(o),env_(std::make_shared<Environment>()){install_builtins(env_);}
@@ -23,6 +27,13 @@ void Interpreter::install_builtins(const std::shared_ptr<Environment>&e){
   e->define("append",callable("append",2,2,[this](const std::vector<Value>&a,SourcePos p){auto path=path_text(a[0],p);if(!std::holds_alternative<std::string>(a[1].data()))runtime_fail(p,"append needs Text.","FileError");std::ofstream f(path,std::ios::binary|std::ios::app);if(!f)runtime_fail(p,"Could not append to '"+path+"'.","FileError");f<<std::get<std::string>(a[1].data());if(!f)runtime_fail(p,"Appending to '"+path+"' failed.","FileError");return Value{};}));
   e->define("open",callable("open",1,1,[this](const std::vector<Value>&a,SourcePos p){auto path=path_text(a[0],p);auto file=std::make_shared<FileData>();file->path=path;file->stream=std::make_shared<std::fstream>(path,std::ios::in|std::ios::out|std::ios::binary);if(!file->stream->is_open())runtime_fail(p,"Could not open '"+path+"'.","FileError");return Value(file);}));
   e->define("wait",callable("wait",1,1,[this](const std::vector<Value>&a,SourcePos p){auto d=std::get_if<DurationData>(&a[0].data());if(!d)runtime_fail(p,"wait needs a Duration.","TimeError");if(d->milliseconds<0)runtime_fail(p,"wait duration cannot be negative.","TimeError");std::this_thread::sleep_for(std::chrono::milliseconds(d->milliseconds));return Value{};}));
+  e->define("bytes",callable("bytes",1,1,[](const std::vector<Value>&a,SourcePos p){
+    auto text=std::get_if<std::string>(&a[0].data());
+    if(!text)throw Error(p,"bytes needs Text.");
+    auto out=std::make_shared<ByteBufferData>();
+    out->bytes.assign(text->begin(),text->end());
+    return Value(out);
+  }));
 }
 
 std::shared_ptr<ModuleData> Interpreter::builtin_module(const std::string&name){
@@ -46,8 +57,7 @@ std::shared_ptr<ModuleData> Interpreter::builtin_module(const std::string&name){
 Value Interpreter::call(Value c,const std::vector<Value>&args,SourcePos p){
   auto f=std::get_if<std::shared_ptr<CallableData>>(&c.data());
   if(!f)throw Error(p,"Only a function or method can be called.");
-  if((!(*f)->variadic&&args.size()!=(*f)->min_args)||((*f)->variadic&&args.size()<(*f)->min_args))
-    throw Error(p,"'"+(*f)->name+"' needs "+std::to_string((*f)->min_args)+((*f)->variadic?" or more":"")+" values, but got "+std::to_string(args.size())+".");
+  if((!(*f)->variadic&&args.size()!=(*f)->min_args)||((*f)->variadic&&args.size()<(*f)->min_args))throw Error(p,"'"+(*f)->name+"' needs "+std::to_string((*f)->min_args)+((*f)->variadic?" or more":"")+" values, but got "+std::to_string(args.size())+".");
   return (*f)->call(args,p);
 }
 
@@ -59,6 +69,7 @@ Value Interpreter::instantiate(const std::shared_ptr<TypeData>&type,SourcePos p)
 Value Interpreter::member(Value v,const std::string&name,SourcePos p,bool auto_call){
   if(name=="len"){
     if(auto t=std::get_if<std::string>(&v.data()))return static_cast<std::int64_t>(t->size());
+    if(auto b=std::get_if<std::shared_ptr<ByteBufferData>>(&v.data()))return static_cast<std::int64_t>((*b)->bytes.size());
     if(auto l=std::get_if<std::shared_ptr<ListData>>(&v.data()))return static_cast<std::int64_t>((*l)->items.size());
     if(auto m=std::get_if<std::shared_ptr<MapData>>(&v.data()))return static_cast<std::int64_t>((*m)->items.size());
     if(auto s=std::get_if<std::shared_ptr<SetData>>(&v.data()))return static_cast<std::int64_t>((*s)->items.size());
