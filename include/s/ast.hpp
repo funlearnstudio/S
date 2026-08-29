@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -19,28 +20,43 @@ struct Literal final : Expr {
   using Data=std::variant<std::int64_t,double,std::string,bool>;
   Literal(SourcePos p,Data v):Expr(p),value(std::move(v)){} Data value;
 };
+struct Duration final : Expr { Duration(SourcePos p,std::int64_t ms):Expr(p),milliseconds(ms){} std::int64_t milliseconds; };
 struct Variable final : Expr { Variable(SourcePos p,std::string n):Expr(p),name(std::move(n)){} std::string name; };
 struct Binary final : Expr { Binary(SourcePos p,ExprPtr l,TokenKind o,ExprPtr r):Expr(p),left(std::move(l)),op(o),right(std::move(r)){} ExprPtr left; TokenKind op; ExprPtr right; };
 struct Unary final : Expr { Unary(SourcePos p,TokenKind o,ExprPtr v):Expr(p),op(o),value(std::move(v)){} TokenKind op; ExprPtr value; };
 struct List final : Expr { List(SourcePos p,std::vector<ExprPtr> v):Expr(p),items(std::move(v)){} std::vector<ExprPtr> items; };
+struct Map final : Expr { Map(SourcePos p,std::vector<std::pair<ExprPtr,ExprPtr>> v):Expr(p),items(std::move(v)){} std::vector<std::pair<ExprPtr,ExprPtr>> items; };
+struct Set final : Expr { Set(SourcePos p,std::vector<ExprPtr> v):Expr(p),items(std::move(v)){} std::vector<ExprPtr> items; };
 struct Index final : Expr { Index(SourcePos p,ExprPtr v,ExprPtr i):Expr(p),value(std::move(v)),index(std::move(i)){} ExprPtr value,index; };
 struct Member final : Expr { Member(SourcePos p,ExprPtr v,std::string n):Expr(p),value(std::move(v)),name(std::move(n)){} ExprPtr value; std::string name; };
 struct Call final : Expr { Call(SourcePos p,ExprPtr c,std::vector<ExprPtr> a):Expr(p),callee(std::move(c)),args(std::move(a)){} ExprPtr callee; std::vector<ExprPtr> args; };
 struct Ask final : Expr { Ask(SourcePos p,ExprPtr q):Expr(p),question(std::move(q)){} ExprPtr question; };
 struct Range final : Expr { Range(SourcePos p,ExprPtr a,ExprPtr b):Expr(p),start(std::move(a)),end(std::move(b)){} ExprPtr start,end; };
+struct TryExpr final : Expr { TryExpr(SourcePos p,ExprPtr v):Expr(p),value(std::move(v)){} ExprPtr value; };
 
 struct ExprStmt final : Stmt { ExprStmt(SourcePos p,ExprPtr v):Stmt(p),value(std::move(v)){} ExprPtr value; };
-struct Assign final : Stmt { Assign(SourcePos p,ExprPtr t,ExprPtr v):Stmt(p),target(std::move(t)),value(std::move(v)){} ExprPtr target,value; };
+struct Assign final : Stmt { Assign(SourcePos p,ExprPtr t,ExprPtr v,Block i={}):Stmt(p),target(std::move(t)),value(std::move(v)),init(std::move(i)){} ExprPtr target,value; Block init; };
 struct Say final : Stmt { Say(SourcePos p,ExprPtr v):Stmt(p),value(std::move(v)){} ExprPtr value; };
 struct If final : Stmt { If(SourcePos p,ExprPtr c,Block t,Block e):Stmt(p),condition(std::move(c)),then_block(std::move(t)),else_block(std::move(e)){} ExprPtr condition; Block then_block,else_block; };
 struct Repeat final : Stmt { Repeat(SourcePos p,ExprPtr c,Block b):Stmt(p),count(std::move(c)),body(std::move(b)){} ExprPtr count; Block body; };
-struct For final : Stmt { For(SourcePos p,std::string n,ExprPtr v,Block b):Stmt(p),name(std::move(n)),values(std::move(v)),body(std::move(b)){} std::string name; ExprPtr values; Block body; };
+struct For final : Stmt { For(SourcePos p,std::vector<std::string> n,ExprPtr v,Block b):Stmt(p),names(std::move(n)),values(std::move(v)),body(std::move(b)){} std::vector<std::string> names; ExprPtr values; Block body; };
 struct While final : Stmt { While(SourcePos p,ExprPtr c,Block b):Stmt(p),condition(std::move(c)),body(std::move(b)){} ExprPtr condition; Block body; };
 struct Function final : Stmt { Function(SourcePos p,std::string n,std::vector<std::string> a,Block b):Stmt(p),name(std::move(n)),params(std::move(a)),body(std::move(b)){} std::string name; std::vector<std::string> params; Block body; };
 struct Give final : Stmt { Give(SourcePos p,ExprPtr v):Stmt(p),value(std::move(v)){} ExprPtr value; };
-// Reserved 0.2 AST shape. Keeping it in the common AST prevents an object system
-// from requiring a parser/interpreter rewrite when its final surface syntax lands.
-struct Type final : Stmt { Type(SourcePos p,std::string n,Block b):Stmt(p),name(std::move(n)),body(std::move(b)){} std::string name; Block body; };
-struct Program { Block statements; };
+struct FieldDecl { SourcePos pos; std::string name; ExprPtr value; };
+struct Type final : Stmt { Type(SourcePos p,std::string n,std::vector<FieldDecl> f,std::vector<std::shared_ptr<Function>> m):Stmt(p),name(std::move(n)),fields(std::move(f)),methods(std::move(m)){} std::string name; std::vector<FieldDecl> fields; std::vector<std::shared_ptr<Function>> methods; };
+struct Use final : Stmt { Use(SourcePos p,std::string n):Stmt(p),name(std::move(n)){} std::string name; };
+struct Try final : Stmt { Try(SourcePos p,Block b,std::string n,Block e):Stmt(p),body(std::move(b)),error_name(std::move(n)),else_block(std::move(e)){} Block body; std::string error_name; Block else_block; };
+struct Fail final : Stmt { Fail(SourcePos p,ExprPtr v):Stmt(p),value(std::move(v)){} ExprPtr value; };
+
+struct Module {
+  std::string name;
+  std::string path;
+  Block statements;
+  std::vector<std::string> imports;
+  bool builtin=false;
+  bool native=false;
+};
+struct Program { Block statements; std::vector<Module> modules; std::string entry; };
 
 } // namespace s::ast
