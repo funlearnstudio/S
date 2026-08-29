@@ -1,0 +1,19 @@
+use web
+use json
+use test
+
+make greet body
+    name = web.param "name"
+    data = ["hello": name, "body": body]
+    payload = json.stringify data
+    give web.json payload
+
+web.get "/hello/:name" greet
+
+result = web.handle "GET" "/hello/SE" "request"
+status = web.handle_status "GET" "/hello/SE" "request"
+
+test.equal status 200
+not_empty = result != ""
+test.ok not_empty
+say result
