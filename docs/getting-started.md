@@ -1,32 +1,28 @@
-# Getting Started
+# Getting started with SE
 
-## Requirements
+Create `hello.se`:
 
-- CMake 3.20 or newer
-- GCC 10+, Clang 12+, or another C++20 compiler
+```se
+name = ask "Name"
+say "Hello " + name
+```
 
-## Build and install
+Run it:
 
 ```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build
-ctest --test-dir build --output-on-failure
-cmake --install build --prefix "$HOME/.local"
+se run hello.se
 ```
 
-Create `hello.s`:
-
-```s
-say "Hello World"
-```
-
-Run or compile it:
+Check it without running:
 
 ```bash
-s run hello.s
-s check hello.s
-s build hello.s
-./hello
+se check hello.se
 ```
 
-Run `s` without arguments for the REPL. A blank line finishes an indented block.
+Build a native executable:
+
+```bash
+se build hello.se
+```
+
+Source files should use `.se`. Legacy `.s` remains accepted temporarily for S 0.2 projects.

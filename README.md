@@ -1,10 +1,10 @@
-# S
+# SE
 
 > Simple at every level.
 
-S is a low-punctuation, safety-first programming language implemented in C++20. S 0.2 keeps the S 0.1 syntax and expands it with user-defined types, modules, typed collections, recoverable errors, standard file/path/time facilities, and a safe C ABI bridge.
+SE is the next name of the S language. Starting with the 0.3 line, source files use **`.se`** and the command-line tool is **`se`**. The compiler remains C++20, low-punctuation, safety-first, and compatible with existing S 0.2 language semantics. Legacy `.s` files are accepted during the transition, but new projects should use `.se`.
 
-```s
+```se
 type Player
     name = ""
     hp = 100
@@ -20,44 +20,58 @@ say player.name
 say player.hp
 ```
 
-## Build S
-
-You need CMake 3.20+ and a C++20 compiler.
+## Build from source
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build
-ctest --test-dir build --output-on-failure
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
 ```
 
-The CLI is at `build/s`:
+Then run:
 
 ```bash
-./build/s run examples/type.s
-./build/s check examples/modules/main.s
-./build/s build examples/collections.s
-./examples/collections
-./build/s
+./build/se run examples/type.se
+./build/se check examples/modules/main.se
+./build/se build examples/collections.se
 ```
 
-`s build` resolves and checks the full S module graph, emits C++20 for the resolved program, and invokes the system C++ compiler. The resulting executable embeds the S 0.2 runtime code it needs and does not re-read or parse the original S source at startup.
+On Windows the executable is normally `build\\Release\\se.exe`.
 
-## S 0.2
+## Install
 
-- S 0.1: `say`, `ask`, variables, math/comparison, indentation blocks, control flow, `make`/`give`, safe List indexing, REPL, `run`, `check`, and native `build`
-- user-defined `type`, inferred fields, simple initialization, methods, and implicit current-object field access
-- `use` modules with project/std/package resolution and circular-import detection
-- typed List, Map, and Set operations and iteration
-- recoverable `try` / `try expr` / `fail` error model
-- file I/O with automatic resource cleanup, cross-platform paths, `time.now`, and `ms` / `s` / `min` Duration values
-- C ABI native modules for Int/Num/Bool/Text and opaque managed native handles; C++ libraries connect through small C wrappers
-- interpreter/native parity tests on macOS and Linux CI
+GitHub Releases publish ready-to-install binaries for Linux x86_64, macOS Intel, macOS Apple Silicon, and Windows x86_64.
 
-See the [S 0.2 language reference](docs/language-reference.md), [types](docs/types.md), [modules](docs/modules.md), [collections](docs/collections.md), [errors](docs/errors.md), [native interoperability](docs/native-interop.md), and the [roadmap](docs/roadmap.md).
+macOS / Linux:
 
-## Design boundary
+```bash
+curl -fsSL https://raw.githubusercontent.com/funlearnstudio/S/main/scripts/install.sh | sh
+```
 
-S intentionally does not expose raw pointers, C++ templates, arbitrary C++ class ABI details, manual memory management, or complex import syntax to ordinary S programs. Those details stay in the compiler, runtime, standard library, or a native wrapper layer.
+Windows PowerShell:
+
+```powershell
+iwr https://raw.githubusercontent.com/funlearnstudio/S/main/scripts/install.ps1 -UseBasicParsing | iex
+```
+
+After installation:
+
+```bash
+se --version
+se run hello.se
+se check hello.se
+se build hello.se
+```
+
+See `docs/installation.md` for PATH and uninstall details.
+
+## VS Code
+
+The repository contains a VS Code extension in `vscode/`. Tagged releases also attach `se-vscode.vsix`. It provides `.se` syntax highlighting, indentation, snippets, and commands for `SE: Run`, `SE: Check`, and `SE: Build`.
+
+## Native interoperability
+
+SE keeps the safe C ABI bridge from S 0.2, including Int/Num/Bool/Text/Bytes, fallible calls, and managed opaque handles. `SEBytesView` is the preferred public spelling; `SBytesView` remains an ABI-compatible alias.
 
 ## License
 
