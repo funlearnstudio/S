@@ -6,16 +6,35 @@
 #include "s/lexer.hpp"
 #include "s/modules.hpp"
 #include "s/parser.hpp"
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <vector>
 
 namespace {
 std::string read_file(const std::filesystem::path&p){std::ifstream f(p);if(!f)throw std::runtime_error("Could not open "+p.string());return {std::istreambuf_iterator<char>(f),{}};}
 s::ast::Program frontend_file(const std::filesystem::path&path){s::ModuleLoader loader;auto program=loader.load(path);s::Checker{}.check(program);return program;}
 std::string shell_quote(const std::string&s){std::string r="'";for(char c:s){if(c=='\'')r+="'\\''";else r+=c;}return r+"'";}
+
+bool is_se_source(const std::filesystem::path&path){auto ext=path.extension().string();return ext==".se"||ext==".s";}
+
+std::vector<std::filesystem::path> source_files(const std::filesystem::path&root){
+  std::vector<std::filesystem::path> out;
+  if(std::filesystem::is_regular_file(root)){if(is_se_source(root))out.push_back(root);return out;}
+  if(!std::filesystem::exists(root))throw std::runtime_error("Path does not exist: "+root.string());
+  for(const auto&entry:std::filesystem::recursive_directory_iterator(root)){
+    if(entry.is_directory()){
+      auto name=entry.path().filename().string();
+      if(name==".git"||name=="build"||name=="node_modules")continue;
+    }
+    if(entry.is_regular_file()&&is_se_source(entry.path()))out.push_back(entry.path());
+  }
+  std::sort(out.begin(),out.end());
+  return out;
+}
 
 void write_new_file(const std::filesystem::path&path,const std::string&content){
   if(std::filesystem::exists(path))throw std::runtime_error("Refusing to overwrite "+path.string());
@@ -30,7 +49,9 @@ void print_help(){
     "SE - simple at every level\n\n"
     "Commands:\n"
     "  se run file.se                 Run an SE program\n"
-    "  se check file.se               Parse and type-check without running\n"
+    "  se check file.se               Parse and type-check one file\n"
+    "  se check-all [path]            Check every .se file in a project\n"
+    "  se test [path]                 Run *_test.se files recursively\n"
     "  se build file.se               Build a native executable\n"
     "  se bind module.sbind [dir]     Generate C ABI bindings\n"
     "  se new app NAME                Create a normal SE application\n"
@@ -59,8 +80,50 @@ int doctor_command(){
   else if(const char*legacy=std::getenv("S_HOME"))std::cout<<"  S_HOME: "<<legacy<<" (legacy)\n";
   else std::cout<<"  package home: default search paths\n";
   std::cout<<"  current directory: "<<std::filesystem::current_path().string()<<"\n";
-  std::cout<<"Doctor finished. Use 'se check file.se' for source diagnostics.\n";
+  std::cout<<"Doctor finished. Use 'se check file.se' or 'se check-all .' for source diagnostics.\n";
   return 0;
+}
+
+int check_all_command(const std::filesystem::path&root){
+  auto files=source_files(root);
+  if(files.empty()){std::cout<<"No SE source files found under "<<root.string()<<"\n";return 0;}
+  std::size_t passed=0,failed=0;
+  for(const auto&path:files){
+    try{frontend_file(path);++passed;std::cout<<"PASS "<<path.string()<<'\n';}
+    catch(const s::Error&e){++failed;std::cerr<<"FAIL "<<path.string()<<'\n'<<s::format_error(e,read_file(path));}
+    catch(const std::exception&e){++failed;std::cerr<<"FAIL "<<path.string()<<": "<<e.what()<<'\n';}
+  }
+  std::cout<<"Checked "<<files.size()<<" file(s): "<<passed<<" passed, "<<failed<<" failed.\n";
+  return failed?1:0;
+}
+
+bool is_test_file(const std::filesystem::path&path){
+  auto name=path.filename().string();
+  return name.size()>=8&&(name.ends_with("_test.se")||name.ends_with("_test.s"));
+}
+
+int test_command(const std::filesystem::path&root){
+  auto all=source_files(root);
+  std::vector<std::filesystem::path> tests;
+  std::copy_if(all.begin(),all.end(),std::back_inserter(tests),is_test_file);
+  if(tests.empty()){std::cout<<"No *_test.se files found under "<<root.string()<<"\n";return 0;}
+  std::size_t passed=0,failed=0;
+  for(const auto&path:tests){
+    try{
+      auto program=frontend_file(path);
+      std::ostringstream captured;
+      std::istringstream input;
+      s::Interpreter vm(input,captured);
+      vm.run(program);
+      ++passed;
+      std::cout<<"PASS "<<path.string()<<'\n';
+      auto text=captured.str();if(!text.empty())std::cout<<text;
+    }catch(const s::Error&e){++failed;std::cerr<<"FAIL "<<path.string()<<'\n'<<s::format_error(e,read_file(path));}
+    catch(const s::RuntimeFailure&e){++failed;const auto&x=e.error();std::cerr<<"FAIL "<<path.string()<<": "<<x.kind<<": "<<x.message<<'\n';}
+    catch(const std::exception&e){++failed;std::cerr<<"FAIL "<<path.string()<<": "<<e.what()<<'\n';}
+  }
+  std::cout<<"Tests: "<<passed<<" passed, "<<failed<<" failed.\n";
+  return failed?1:0;
 }
 
 int new_project(const std::string&kind,const std::filesystem::path&root){
@@ -69,9 +132,10 @@ int new_project(const std::string&kind,const std::filesystem::path&root){
   std::filesystem::create_directories(root);
   if(kind=="app"){
     write_new_file(root/"src/main.se","say \"Hello from SE\"\n");
-    write_new_file(root/"README.md","# "+root.filename().string()+"\n\nRun:\n\n```sh\nse run src/main.se\n```\n\nBuild:\n\n```sh\nse build src/main.se\n```\n");
+    write_new_file(root/"tests/main_test.se","value = 2 + 2\nif value != 4\n    fail \"2 + 2 should be 4\"\n");
+    write_new_file(root/"README.md","# "+root.filename().string()+"\n\nRun:\n\n```sh\nse run src/main.se\n```\n\nCheck the project:\n\n```sh\nse check-all .\n```\n\nRun tests:\n\n```sh\nse test .\n```\n\nBuild:\n\n```sh\nse build src/main.se\n```\n");
     std::cout<<"Created SE app at "<<root.string()<<"\n";
-    std::cout<<"Next: cd "<<root.string()<<" && se run src/main.se\n";
+    std::cout<<"Next: cd "<<root.string()<<" && se check-all . && se test . && se run src/main.se\n";
     return 0;
   }
   if(kind=="web"){
@@ -79,13 +143,14 @@ int new_project(const std::string&kind,const std::filesystem::path&root){
       "# SE backend entry point.\n"
       "# The HTTP runtime is being built on top of this project layout.\n"
       "say \"SE web backend ready\"\n");
+    write_new_file(root/"backend/tests/backend_test.se","value = 1 + 1\nif value != 2\n    fail \"backend math check failed\"\n");
     write_new_file(root/"frontend/index.html",
       "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n  <title>SE Web</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <main id=\"app\">Hello from SE Web</main>\n  <script type=\"module\" src=\"./app.js\"></script>\n</body>\n</html>\n");
     write_new_file(root/"frontend/style.css","body { font-family: system-ui, sans-serif; margin: 2rem; }\n");
     write_new_file(root/"frontend/app.js","const app = document.querySelector('#app');\nconsole.log('SE Web frontend ready', app);\n");
     write_new_file(root/"frontend/app.ts","const message: string = 'SE Web TypeScript frontend ready';\nconsole.log(message);\n");
     write_new_file(root/"README.md",
-      "# "+root.filename().string()+"\n\nThis project keeps the SE backend and browser frontend together.\n\n- `backend/main.se` - SE backend entry point\n- `frontend/index.html` - HTML\n- `frontend/style.css` - CSS\n- `frontend/app.js` - JavaScript\n- `frontend/app.ts` - TypeScript source\n\nRun the current backend entry point with:\n\n```sh\nse run backend/main.se\n```\n\nThe built-in SE HTTP server/API layer is not implemented yet; this template establishes the stable project structure for it.\n");
+      "# "+root.filename().string()+"\n\nThis project keeps the SE backend and browser frontend together.\n\n- `backend/main.se` - SE backend entry point\n- `backend/tests/` - SE backend tests\n- `frontend/index.html` - HTML\n- `frontend/style.css` - CSS\n- `frontend/app.js` - JavaScript\n- `frontend/app.ts` - TypeScript source\n\nCheck and test the backend with:\n\n```sh\nse check-all backend\nse test backend\nse run backend/main.se\n```\n\nThe built-in SE HTTP server/API layer is not implemented yet; this template establishes the stable project structure for it.\n");
     std::cout<<"Created SE web project at "<<root.string()<<"\n";
     std::cout<<"Frontend supports HTML, CSS, JavaScript, and TypeScript files side-by-side with SE.\n";
     return 0;
@@ -132,6 +197,8 @@ int main(int argc,char**argv){
     if(argc==2&&std::string(argv[1])=="--version"){std::cout<<"SE 0.4.0-dev\n";return 0;}
     if(argc==2&&(std::string(argv[1])=="help"||std::string(argv[1])=="--help"||std::string(argv[1])=="-h")){print_help();return 0;}
     if(argc==2&&std::string(argv[1])=="doctor")return doctor_command();
+    if((argc==2||argc==3)&&std::string(argv[1])=="check-all")return check_all_command(argc==3?std::filesystem::path(argv[2]):std::filesystem::path("."));
+    if((argc==2||argc==3)&&std::string(argv[1])=="test")return test_command(argc==3?std::filesystem::path(argv[2]):std::filesystem::path("."));
     if(argc==4&&std::string(argv[1])=="new")return new_project(argv[2],argv[3]);
     if(argc>=3&&std::string(argv[1])=="bind"){
       if(argc>4){std::cerr<<"Use: se bind module.sbind [output-directory]\n";return 2;}
