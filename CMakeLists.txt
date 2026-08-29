@@ -1,16 +1,19 @@
 cmake_minimum_required(VERSION 3.20)
-project(SE VERSION 0.4.0 LANGUAGES C CXX)
+project(SE VERSION 0.5.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(s_core
   src/lexer/token.cpp src/lexer/lexer.cpp src/parser/parser.cpp
-  src/runtime/error.cpp src/runtime/value.cpp src/modules/modules.cpp src/ffi/ffi.cpp src/ffi/bindgen.cpp
+  src/runtime/error.cpp src/runtime/value.cpp src/runtime/platform.cpp src/modules/modules.cpp src/ffi/ffi.cpp src/ffi/bindgen.cpp
   src/interpreter/interpreter.cpp src/type/checker.cpp src/compiler/compiler.cpp)
 target_include_directories(s_core PUBLIC include)
 target_compile_definitions(s_core PRIVATE S_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}" S_NATIVE_BUILD_DIR="${CMAKE_CURRENT_BINARY_DIR}")
 target_link_libraries(s_core PUBLIC ${CMAKE_DL_LIBS})
+if(WIN32)
+  target_link_libraries(s_core PUBLIC ws2_32)
+endif()
 if(MSVC)
   target_compile_options(s_core PRIVATE /W4 /WX /permissive- /wd4456 /wd4996)
 else()
@@ -64,6 +67,8 @@ if(BUILD_TESTING)
   add_test(NAME cli_errors COMMAND se run ${CMAKE_SOURCE_DIR}/examples/errors.s)
   add_test(NAME cli_help_member COMMAND se run ${CMAKE_SOURCE_DIR}/examples/help.se)
   add_test(NAME cli_stdlib COMMAND se run ${CMAKE_SOURCE_DIR}/examples/stdlib.se)
+  add_test(NAME cli_platform COMMAND se run ${CMAKE_SOURCE_DIR}/examples/platform.se)
+  add_test(NAME cli_web_router COMMAND se run ${CMAKE_SOURCE_DIR}/examples/web-router.se)
   add_test(NAME cli_help COMMAND se help)
   add_test(NAME cli_doctor COMMAND se doctor)
   add_test(NAME cli_check_all COMMAND se check-all ${CMAKE_SOURCE_DIR}/examples/project-tests)
