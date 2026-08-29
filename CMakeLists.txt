@@ -6,7 +6,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(s_core
   src/lexer/token.cpp src/lexer/lexer.cpp src/parser/parser.cpp
-  src/runtime/error.cpp src/runtime/value.cpp src/modules/modules.cpp src/ffi/ffi.cpp
+  src/runtime/error.cpp src/runtime/value.cpp src/modules/modules.cpp src/ffi/ffi.cpp src/ffi/bindgen.cpp
   src/interpreter/interpreter.cpp src/type/checker.cpp src/compiler/compiler.cpp)
 target_include_directories(s_core PUBLIC include)
 target_compile_definitions(s_core PRIVATE S_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}" S_NATIVE_BUILD_DIR="${CMAKE_CURRENT_BINARY_DIR}")
@@ -27,7 +27,7 @@ else()
 endif()
 
 add_library(native_test SHARED native/native_test.c)
-target_include_directories(native_test PRIVATE include)
+target_include_directories(native_test PRIVATE include native)
 set_target_properties(native_test PROPERTIES OUTPUT_NAME native_test)
 if(MSVC)
   target_compile_options(native_test PRIVATE /W4 /WX)
