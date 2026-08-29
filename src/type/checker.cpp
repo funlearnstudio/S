@@ -109,6 +109,24 @@ TypeInfo Checker::builtin_module(const std::string& name) const{
     m.members["write"]=fn({TypeInfo(TypeKind::Unknown),TypeInfo(TypeKind::Text)},TypeInfo(TypeKind::None),true);
     m.members["append"]=fn({TypeInfo(TypeKind::Unknown),TypeInfo(TypeKind::Text)},TypeInfo(TypeKind::None),true);
     m.members["open"]=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::File),true);
+  }else if(name=="math"){
+    m.members["pi"]=TypeInfo(TypeKind::Num);
+    m.members["sqrt"]=fn({TypeInfo(TypeKind::Num)},TypeInfo(TypeKind::Num));
+    m.members["abs"]=fn({TypeInfo(TypeKind::Num)},TypeInfo(TypeKind::Num));
+    m.members["floor"]=fn({TypeInfo(TypeKind::Num)},TypeInfo(TypeKind::Num));
+    m.members["ceil"]=fn({TypeInfo(TypeKind::Num)},TypeInfo(TypeKind::Num));
+    m.members["round"]=fn({TypeInfo(TypeKind::Num)},TypeInfo(TypeKind::Num));
+    m.members["pow"]=fn({TypeInfo(TypeKind::Num),TypeInfo(TypeKind::Num)},TypeInfo(TypeKind::Num));
+    m.members["min"]=fn({TypeInfo(TypeKind::Num),TypeInfo(TypeKind::Num)},TypeInfo(TypeKind::Num));
+    m.members["max"]=fn({TypeInfo(TypeKind::Num),TypeInfo(TypeKind::Num)},TypeInfo(TypeKind::Num));
+  }else if(name=="random"){
+    m.members["int"]=fn({TypeInfo(TypeKind::Int),TypeInfo(TypeKind::Int)},TypeInfo(TypeKind::Int));
+    m.members["num"]=fn({},TypeInfo(TypeKind::Num));
+  }else if(name=="os"){
+    m.members["platform"]=TypeInfo(TypeKind::Text);
+    m.members["cwd"]=fn({},TypeInfo(TypeKind::Path));
+    m.members["getenv"]=fn({TypeInfo(TypeKind::Text)},TypeInfo(TypeKind::Text));
+    m.members["has_env"]=fn({TypeInfo(TypeKind::Text)},TypeInfo(TypeKind::Bool));
   }
   return m;
 }
@@ -138,7 +156,7 @@ std::shared_ptr<FunctionSig> Checker::member_call(const TypeInfo& t,const std::s
   }
   if(t.kind==TypeKind::File){
     if(name=="read") return fn({},TypeInfo(TypeKind::Text),true).callable;
-    if(name=="close") return fn({},TypeInfo(TypeKind::None)).callable;
+    if(name=="close") return fn({},TypeInfo(TypeKind::None),true).callable;
     if(name=="write") return fn({TypeInfo(TypeKind::Text)},TypeInfo(TypeKind::None),true).callable;
   }
   throw Error(p,type_text(t)+" has no method named '"+name+"'.","Use value.help to see the members available on this value.");
