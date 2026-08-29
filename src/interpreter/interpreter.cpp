@@ -28,7 +28,7 @@ void Interpreter::install_builtins(const std::shared_ptr<Environment>&e){
 std::shared_ptr<ModuleData> Interpreter::builtin_module(const std::string&name){
   auto m=std::make_shared<ModuleData>();m->name=name;
   if(name=="path"){
-    m->exports["join"]=callable("path.join",1,64,[this](const std::vector<Value>&a,SourcePos p){std::filesystem::path r;for(auto&v:a)r/=path_text(v,p);return Value(PathData{r});},true);
+    m->exports["join"]=callable("path.join",1,64,[](const std::vector<Value>&a,SourcePos p){std::filesystem::path r;for(auto&v:a)r/=path_text(v,p);return Value(PathData{r});},true);
     m->exports["name"]=callable("path.name",1,1,[](const std::vector<Value>&a,SourcePos p){return Value(std::filesystem::path(path_text(a[0],p)).filename().string());});
     m->exports["ext"]=callable("path.ext",1,1,[](const std::vector<Value>&a,SourcePos p){return Value(std::filesystem::path(path_text(a[0],p)).extension().string());});
     m->exports["parent"]=callable("path.parent",1,1,[](const std::vector<Value>&a,SourcePos p){return Value(PathData{std::filesystem::path(path_text(a[0],p)).parent_path()});});
