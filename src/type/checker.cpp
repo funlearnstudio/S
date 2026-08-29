@@ -61,7 +61,7 @@ TypeInfo Checker::find(const std::string& n,SourcePos p) const{
   for(auto i=scopes_.rbegin();i!=scopes_.rend();++i){
     if(auto x=i->find(n);x!=i->end()) return x->second;
   }
-  throw Error(p,"I don't know what \""+n+"\" is.","Create it first with "+n+" = value.");
+  throw Error(p,"I don't know what \""+n+"\" is.","Create it first with "+n+" = value, or check the spelling.");
 }
 
 void Checker::put(const std::string& n,TypeInfo t,SourcePos p){
@@ -141,7 +141,7 @@ std::shared_ptr<FunctionSig> Checker::member_call(const TypeInfo& t,const std::s
     if(name=="close") return fn({},TypeInfo(TypeKind::None)).callable;
     if(name=="write") return fn({TypeInfo(TypeKind::Text)},TypeInfo(TypeKind::None),true).callable;
   }
-  throw Error(p,type_text(t)+" has no method named '"+name+"'.");
+  throw Error(p,type_text(t)+" has no method named '"+name+"'.","Use value.help to see the members available on this value.");
 }
 
 TypeInfo Checker::expr(const ast::ExprPtr& e){
@@ -177,7 +177,7 @@ TypeInfo Checker::expr(const ast::ExprPtr& e){
     TypeInfo value;
     for(auto& i:x->items){
       auto k=expr(i.first);
-      if(k.kind!=TypeKind::Text) throw Error(i.first->pos,"Map keys are Text in S 0.2.");
+      if(k.kind!=TypeKind::Text) throw Error(i.first->pos,"Map keys are Text in SE.");
       auto v=expr(i.second);
       if(value.kind==TypeKind::Unknown) value=v;
       else if(!compatible(value,v)) throw Error(i.second->pos,"A Map keeps one value type. It already has "+type_text(value)+", but this is "+type_text(v)+".");
@@ -208,6 +208,7 @@ TypeInfo Checker::expr(const ast::ExprPtr& e){
   }
   if(auto x=std::dynamic_pointer_cast<ast::Member>(e)){
     auto t=expr(x->value);
+    if(x->name=="help") return TypeInfo(TypeKind::Text);
     if(x->name=="len"&&(t.kind==TypeKind::Text||t.kind==TypeKind::Bytes||t.kind==TypeKind::List||t.kind==TypeKind::Map||t.kind==TypeKind::Set)) return TypeInfo(TypeKind::Int);
     if((x->name=="upper"||x->name=="lower")&&t.kind==TypeKind::Text) return TypeInfo(TypeKind::Text);
     if(t.kind==TypeKind::Object&&t.object){
@@ -216,7 +217,7 @@ TypeInfo Checker::expr(const ast::ExprPtr& e){
     }
     if(t.kind==TypeKind::Module){if(auto m=t.members.find(x->name);m!=t.members.end()){if(m->second.callable&&m->second.callable->params.empty()) return m->second.callable->result;return m->second;}}
     if(t.kind==TypeKind::File){auto sig=member_call(t,x->name,x->pos);if(sig->params.empty()) return sig->result;TypeInfo r(TypeKind::Function);r.callable=sig;return r;}
-    throw Error(x->pos,type_text(t)+" has no member named '"+x->name+"'.");
+    throw Error(x->pos,type_text(t)+" has no member named '"+x->name+"'.","Use value.help to see the members available on this value.");
   }
   if(auto x=std::dynamic_pointer_cast<ast::Unary>(e)){auto t=expr(x->value);if(x->op==TokenKind::Not&&t.kind==TypeKind::Bool) return TypeInfo(TypeKind::Bool);if(x->op==TokenKind::Minus&&numeric(t)) return t;throw Error(x->pos,"This unary operation does not work with "+type_text(t)+".");}
   if(auto x=std::dynamic_pointer_cast<ast::Binary>(e)){
