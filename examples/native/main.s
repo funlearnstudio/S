@@ -5,9 +5,6 @@ say square 4.0
 say not_bool false
 say echo "native text"
 
-counter = make_counter
-say counter_value counter
-
 try
     bad = native_error 1
     say bad
