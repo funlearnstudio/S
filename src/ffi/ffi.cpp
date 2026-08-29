@@ -1,4 +1,5 @@
 #include "s/ffi.hpp"
+#include "s/native.h"
 #include <cstdlib>
 #include <filesystem>
 #include <vector>
@@ -47,6 +48,15 @@ Value call_native(const std::shared_ptr<void>&lib,const ast::NativeFunction&f,co
   }
   if(all("Text")&&f.result=="Text"){
     std::vector<const char*> v;std::vector<std::string> keep;for(auto&x:a){if(!std::holds_alternative<std::string>(x.data()))native_fail(p,"Native Text argument has the wrong type.");keep.push_back(std::get<std::string>(x.data()));}for(auto&x:keep)v.push_back(x.c_str());const char*r=nullptr;if(v.empty())r=reinterpret_cast<const char*(*)()>(raw)();else if(v.size()==1)r=reinterpret_cast<const char*(*)(const char*)>(raw)(v[0]);else if(v.size()==2)r=reinterpret_cast<const char*(*)(const char*,const char*)>(raw)(v[0],v[1]);else native_fail(p,"S 0.2 native Text calls support up to 2 values.");if(!r)native_fail(p,"Native function '"+f.name+"' returned no Text.");return std::string(r);
+  }
+  if(all("Bytes")&&(f.result=="Bytes"||f.result=="Int")){
+    std::vector<SBytesView> views;views.reserve(a.size());
+    for(auto&x:a){auto b=std::get_if<std::shared_ptr<ByteBufferData>>(&x.data());if(!b)native_fail(p,"Native Bytes argument has the wrong type.");views.push_back({(*b)->bytes.data(),(*b)->bytes.size()});}
+    if(f.result=="Int"){
+      int r=0;if(views.empty())r=reinterpret_cast<int(*)()>(raw)();else if(views.size()==1)r=reinterpret_cast<int(*)(SBytesView)>(raw)(views[0]);else if(views.size()==2)r=reinterpret_cast<int(*)(SBytesView,SBytesView)>(raw)(views[0],views[1]);else native_fail(p,"S 0.2 native Bytes calls support up to 2 values.");return finish_int(r);
+    }
+    SBytesView r{};if(views.empty())r=reinterpret_cast<SBytesView(*)()>(raw)();else if(views.size()==1)r=reinterpret_cast<SBytesView(*)(SBytesView)>(raw)(views[0]);else if(views.size()==2)r=reinterpret_cast<SBytesView(*)(SBytesView,SBytesView)>(raw)(views[0],views[1]);else native_fail(p,"S 0.2 native Bytes calls support up to 2 values.");
+    if(r.size&&!r.data)native_fail(p,"Native function '"+f.name+"' returned invalid Bytes.");auto out=std::make_shared<ByteBufferData>();if(r.size)out->bytes.assign(r.data,r.data+r.size);return out;
   }
   if(f.args.empty()&&f.result.rfind("Handle:",0)==0){
     void*ptr=reinterpret_cast<void*(*)()>(raw)();if(!ptr)native_fail(p,"Native resource creation failed.");auto h=std::make_shared<NativeHandleData>();h->tag=handle_tag(f.result);if(f.cleanup.empty())h->resource=std::shared_ptr<void>(ptr,[](void*){});else{auto destroy=reinterpret_cast<void(*)(void*)>(symbol(lib,f.cleanup,p));auto keep=lib;h->resource=std::shared_ptr<void>(ptr,[destroy,keep](void*x){destroy(x);});}return h;
