@@ -1,0 +1,22 @@
+{
+  "scopeName": "source.se",
+  "name": "SE",
+  "patterns": [
+    {"include":"#comments"},
+    {"include":"#strings"},
+    {"include":"#numbers"},
+    {"include":"#keywords"},
+    {"include":"#constants"},
+    {"include":"#functions"},
+    {"include":"#types"}
+  ],
+  "repository": {
+    "comments": {"patterns":[{"name":"comment.line.number-sign.se","match":"#.*$"}]},
+    "strings": {"patterns":[{"name":"string.quoted.double.se","begin":"\"","end":"\"","patterns":[{"name":"constant.character.escape.se","match":"\\\\(?:n|t|r|\"|\\\\)"}]}]},
+    "numbers": {"patterns":[{"name":"constant.numeric.se","match":"\\b\\d+(?:\\.\\d+)?(?:ms|s|min)?\\b"}]},
+    "keywords": {"patterns":[{"name":"keyword.control.se","match":"\\b(?:if|else|for|in|while|repeat|make|give|type|use|try|fail|wait|say|ask|set|bytes|and|or|not)\\b"}]},
+    "constants": {"patterns":[{"name":"constant.language.se","match":"\\b(?:true|false|none)\\b"}]},
+    "functions": {"patterns":[{"name":"entity.name.function.se","match":"(?<=\\bmake\\s)[A-Za-z_][A-Za-z0-9_]*"}]},
+    "types": {"patterns":[{"name":"entity.name.type.se","match":"(?<=\\btype\\s)[A-Za-z_][A-Za-z0-9_]*"}]}
+  }
+}

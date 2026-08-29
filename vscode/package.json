@@ -1,0 +1,68 @@
+{
+  "name": "se-language",
+  "displayName": "SE Language",
+  "description": "Language support and run/check/build commands for SE (.se)",
+  "version": "0.3.0",
+  "publisher": "funlearnstudio",
+  "license": "MIT",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Programming Languages"],
+  "activationEvents": ["onLanguage:se", "onCommand:se.run", "onCommand:se.check", "onCommand:se.build"],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [{
+      "id": "se",
+      "aliases": ["SE", "se"],
+      "extensions": [".se"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "se",
+      "scopeName": "source.se",
+      "path": "./syntaxes/se.tmLanguage.json"
+    }],
+    "commands": [
+      {"command":"se.run","title":"SE: Run File","icon":"$(play)"},
+      {"command":"se.check","title":"SE: Check File","icon":"$(check)"},
+      {"command":"se.build","title":"SE: Build File","icon":"$(tools)"}
+    ],
+    "menus": {
+      "editor/title": [
+        {"command":"se.run","when":"resourceLangId == se","group":"navigation@1"},
+        {"command":"se.check","when":"resourceLangId == se","group":"navigation@2"},
+        {"command":"se.build","when":"resourceLangId == se","group":"navigation@3"}
+      ],
+      "editor/context": [
+        {"command":"se.run","when":"resourceLangId == se","group":"navigation@1"},
+        {"command":"se.check","when":"resourceLangId == se","group":"navigation@2"},
+        {"command":"se.build","when":"resourceLangId == se","group":"navigation@3"}
+      ]
+    },
+    "keybindings": [
+      {"command":"se.run","key":"ctrl+f5","mac":"cmd+f5","when":"editorLangId == se"},
+      {"command":"se.check","key":"ctrl+shift+f5","mac":"cmd+shift+f5","when":"editorLangId == se"}
+    ],
+    "snippets": [{"language":"se","path":"./snippets/se.json"}],
+    "configuration": {
+      "title": "SE",
+      "properties": {
+        "se.executablePath": {
+          "type": "string",
+          "default": "se",
+          "description": "Path or command used to run the SE CLI."
+        },
+        "se.reuseTerminal": {
+          "type": "boolean",
+          "default": true,
+          "description": "Reuse the existing SE terminal for Run, Check, and Build commands."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^3.0.0"
+  }
+}

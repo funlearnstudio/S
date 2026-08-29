@@ -1,0 +1,12 @@
+{
+  "Say": {"prefix":"say","body":["say ${1:\"Hello\"}"],"description":"Print a value"},
+  "Ask": {"prefix":"ask","body":["${1:name} = ask ${2:\"Question\"}"],"description":"Ask for input"},
+  "If": {"prefix":"if","body":["if ${1:condition}","    ${2:say \"yes\"}"],"description":"if block"},
+  "If Else": {"prefix":"ifelse","body":["if ${1:condition}","    ${2:say \"yes\"}","else","    ${3:say \"no\"}"],"description":"if/else block"},
+  "Repeat": {"prefix":"repeat","body":["repeat ${1:3}","    ${2:say \"Hello\"}"],"description":"Repeat a block"},
+  "For": {"prefix":"for","body":["for ${1:item} in ${2:1..10}","    ${3:say $1}"],"description":"for loop"},
+  "While": {"prefix":"while","body":["while ${1:condition}","    ${2:say \"running\"}"],"description":"while loop"},
+  "Function": {"prefix":"make","body":["make ${1:name} ${2:arg}","    ${3:give $2}"],"description":"Create a function"},
+  "Type": {"prefix":"type","body":["type ${1:Name}","    ${2:value = 0}","","    make ${3:method}","        ${4:say value}"],"description":"Create a user-defined type"},
+  "Try": {"prefix":"try","body":["try","    ${1:text = read \"file.txt\"}","else ${2:err}","    ${3:say $2}"],"description":"Handle a recoverable error"}
+}
