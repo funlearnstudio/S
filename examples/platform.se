@@ -9,21 +9,21 @@ encoded = json.stringify data
 say encoded
 
 trimmed = text.trim "  SE  "
-test.equal trimmed "SE"
+test.equal "SE" trimmed
 
 parts = text.split "a,b,c" ","
-test.equal parts.len 3
-joined = text.join parts "-"
-test.equal joined "a-b-c"
+test.equal 3 parts.len
+joined = text.join (parts) "-"
+test.equal "a-b-c" joined
 
 nums = [3, 1, 3, 2]
 sorted = collections.sort nums
 unique = collections.unique nums
-test.equal sorted.len 4
-test.equal unique.len 3
+test.equal 4 sorted.len
+test.equal 3 unique.len
 first = collections.first sorted
 last = collections.last sorted
-test.equal first 1
-test.equal last 3
+test.equal 1 first
+test.equal 3 last
 
 say "SE platform libraries OK"
