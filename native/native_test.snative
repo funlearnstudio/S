@@ -4,6 +4,8 @@ add s_test_add Int Int -> Int
 square s_test_square Num -> Num
 not_bool s_test_not Bool -> Bool
 echo s_test_echo Text -> Text
+bytes_echo s_test_bytes_echo Bytes -> Bytes
+bytes_len s_test_bytes_len Bytes -> Int
 native_error s_test_fail Int -> Int fallible
 make_counter s_test_counter_create -> Handle:Counter cleanup s_test_counter_destroy
 counter_value s_test_counter_value Handle:Counter -> Int
