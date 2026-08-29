@@ -19,6 +19,10 @@ make add a b
 make identity[T] value:T -> T
     give value
 
+type Score
+    name = ""
+    points = 0
+
 nums = [1, 2, 3, 4, 5]
 evens = collections.filter nums even
 doubled = collections.map nums double
@@ -33,6 +37,16 @@ test.equal total 15
 test.equal middle.len 3
 test.equal first_two.len 2
 test.equal last_three.len 3
+
+first_score = Score
+    name = "B"
+    points = 20
+second_score = Score
+    name = "A"
+    points = 10
+scores = [first_score, second_score]
+ordered = collections.sort_by scores "points"
+test.equal ordered[0].name "A"
 
 id_number = identity 42
 id_text = identity "SE"
