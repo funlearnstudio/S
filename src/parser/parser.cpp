@@ -194,10 +194,14 @@ ast::ExprPtr Parser::prefix(){
 }
 
 ast::ExprPtr Parser::postfix(ast::ExprPtr value){
+  auto take_member_name=[&](){
+    if(check(TokenKind::Identifier)||check(TokenKind::Map)) return tokens_[at_++];
+    throw Error(peek().pos,"Write a member name after '.'.");
+  };
   auto attach_members=[&](ast::ExprPtr arg){
     while(true){
       if(match(TokenKind::LeftBracket)){auto i=expression();take(TokenKind::RightBracket,"Close this index with ']'.");arg=std::make_shared<ast::Index>(arg->pos,arg,i);continue;}
-      if(match(TokenKind::Dot)){auto n=take(TokenKind::Identifier,"Write a member name after '.'.");arg=std::make_shared<ast::Member>(arg->pos,arg,n.text);continue;}
+      if(match(TokenKind::Dot)){auto n=take_member_name();arg=std::make_shared<ast::Member>(arg->pos,arg,n.text);continue;}
       break;
     }
     return arg;
