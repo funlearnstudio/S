@@ -16,10 +16,23 @@ struct TypeInfo {
   std::shared_ptr<FunctionSig> callable;
   std::shared_ptr<UserTypeInfo> object;
   std::unordered_map<std::string,TypeInfo> members;
-  TypeInfo()=default; explicit TypeInfo(TypeKind k):kind(k){}
+  TypeInfo()=default;
+  explicit TypeInfo(TypeKind k);
 };
 struct FunctionSig { std::vector<TypeInfo> params; TypeInfo result; bool fallible=false; bool variadic=false; std::size_t min_args=0; };
 struct UserTypeInfo { std::string name; std::unordered_map<std::string,TypeInfo> fields; std::unordered_map<std::string,std::shared_ptr<FunctionSig>> methods; };
+
+inline TypeInfo::TypeInfo(TypeKind k):kind(k){
+  if(k==TypeKind::Error){
+    kind=TypeKind::Object;
+    object=std::make_shared<UserTypeInfo>();
+    object->name="Error";
+    object->fields["message"]=TypeInfo(TypeKind::Text);
+    object->fields["source"]=TypeInfo(TypeKind::Text);
+    object->fields["line"]=TypeInfo(TypeKind::Int);
+    object->fields["kind"]=TypeInfo(TypeKind::Text);
+  }
+}
 
 class Checker {
 public: void check(const ast::Program&);
