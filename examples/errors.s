@@ -11,6 +11,6 @@ make validate score
     give score
 
 try
-    say validate -1
+    say validate (0 - 1)
 else err
     say err
