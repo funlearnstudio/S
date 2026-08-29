@@ -1,0 +1,33 @@
+{
+  "name": "se-language",
+  "displayName": "SE Language",
+  "description": "Language support for SE (.se)",
+  "version": "0.3.0",
+  "publisher": "funlearnstudio",
+  "license": "MIT",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Programming Languages"],
+  "activationEvents": ["onLanguage:se"],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [{
+      "id": "se",
+      "aliases": ["SE", "se"],
+      "extensions": [".se"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "se",
+      "scopeName": "source.se",
+      "path": "./syntaxes/se.tmLanguage.json"
+    }],
+    "commands": [
+      {"command":"se.run","title":"SE: Run"},
+      {"command":"se.check","title":"SE: Check"},
+      {"command":"se.build","title":"SE: Build"}
+    ],
+    "snippets": [{"language":"se","path":"./snippets/se.json"}]
+  },
+  "scripts": { "package": "vsce package" },
+  "devDependencies": { "@vscode/vsce": "^3.0.0" }
+}

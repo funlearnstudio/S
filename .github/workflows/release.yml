@@ -1,41 +1,67 @@
-name: S Release
-
+name: SE Release Binaries
 on:
-  workflow_run:
-    workflows: ["S CI"]
-    types: [completed]
-
+  push:
+    tags: ['v*']
 permissions:
   contents: write
-
 jobs:
-  release-0-2-0:
-    if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'main'
-    runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ github.token }}
-      TAG: v0.2.0
+  binaries:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset: se-linux-x86_64
+          - os: macos-13
+            asset: se-macos-x86_64
+          - os: macos-14
+            asset: se-macos-arm64
+          - os: windows-latest
+            asset: se-windows-x86_64
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout validated main commit
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+      - run: cmake --build build --config Release --parallel
+      - name: Install staging tree
+        run: cmake --install build --config Release --prefix package
+      - name: Archive Unix
+        if: runner.os != 'Windows'
+        shell: bash
+        run: tar -C package -czf "${{ matrix.asset }}.tar.gz" .
+      - name: Archive Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path package\* -DestinationPath "${{ matrix.asset }}.zip"
+      - uses: actions/upload-artifact@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-          fetch-depth: 0
-
-      - name: Verify release version
-        run: |
-          grep -F 'project(S VERSION 0.2.0 ' CMakeLists.txt
-          grep -F 'S 0.2.0' RELEASE_NOTES.md
-
-      - name: Create S 0.2.0 release
-        run: |
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "$TAG already exists"
-            exit 0
-          fi
-          gh release create "$TAG" \
-            --target "${{ github.event.workflow_run.head_sha }}" \
-            --title "S 0.2.0" \
-            --notes-file RELEASE_NOTES.md
+          name: ${{ matrix.asset }}
+          path: |
+            ${{ matrix.asset }}.tar.gz
+            ${{ matrix.asset }}.zip
+          if-no-files-found: ignore
+  vscode:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install -g @vscode/vsce
+      - run: cd vscode && vsce package -o ../se-vscode.vsix
+      - uses: actions/upload-artifact@v4
+        with:
+          name: se-vscode
+          path: se-vscode.vsix
+  release:
+    needs: [binaries, vscode]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: dist/*

@@ -13,6 +13,9 @@ typedef struct SBytesView {
     size_t size;
 } SBytesView;
 
+/* SE 0.3 public spelling. SBytesView remains as a source-compatible ABI alias. */
+typedef SBytesView SEBytesView;
+
 #ifdef __cplusplus
 }
 #endif
