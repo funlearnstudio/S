@@ -9,7 +9,7 @@ int s_test_fail(int value){(void)value;return -1;}
 
 static int live_counters=0;
 typedef struct STestCounter { int value; } STestCounter;
-void* s_test_counter_create(void){STestCounter* c=(STestCounter*)malloc(sizeof(STestCounter));if(!c)return NULL;c->value=42;++live_counters;return c;}
+void* s_test_counter_create(int initial){STestCounter* c=(STestCounter*)malloc(sizeof(STestCounter));if(!c)return NULL;c->value=initial;++live_counters;return c;}
 void s_test_counter_destroy(void* raw){if(!raw)return;free(raw);--live_counters;}
 int s_test_counter_value(void* raw){return raw?((STestCounter*)raw)->value:-1;}
 int s_test_live_counters(void){return live_counters;}
