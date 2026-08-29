@@ -48,6 +48,20 @@ Creates a project containing:
 
 This gives SE projects a stable layout for combining an SE backend with HTML, CSS, JavaScript, and TypeScript. The built-in HTTP server/API runtime is **not implemented yet**; the project generator deliberately says so instead of pretending the backend is already complete.
 
+### Standard modules added in this branch
+
+`math` provides `pi`, `sqrt`, `abs`, `floor`, `ceil`, `round`, `pow`, `min`, and `max`.
+
+`random` provides inclusive `random.int min max` and zero-argument `random.num` for a value from 0 to 1.
+
+`os` provides `platform`, `cwd`, `getenv`, and `has_env`.
+
+The checker knows their signatures, so these modules participate in SE static checking rather than being runtime-only helpers.
+
+### Package-home migration
+
+The module loader now prefers `SE_HOME/packages` and falls back to the legacy `S_HOME/packages` location.
+
 ### Existing native-language bridge
 
 SE already has `.snative`, a C ABI bridge, Bytes interop, opaque native handles, cleanup support, and `se bind`. This is the base for calling libraries written in C and C++ and for creating adapters to other languages.
@@ -71,15 +85,11 @@ These should remain optional: simple programs should not need to understand them
 
 ## Standard-library groups
 
-Planned standard modules are grouped by purpose instead of dumping hundreds of global functions into the language.
+Existing core modules include `file`, `path`, and `time`. SE 0.4 adds the first `math`, `random`, and `os` APIs. The next standard-library groups are planned as modules instead of hundreds of global functions:
 
-- `math` — numeric functions and constants
-- `random` — random numbers and sampling
 - `text` — text processing
 - `collections` — collection helpers
 - `json` — JSON parse/stringify
-- `file`, `path`, `time` — existing core facilities
-- `os` — environment and platform information
 - `process` — child processes
 - `net` — sockets and network primitives
 - `http` — HTTP client/server
