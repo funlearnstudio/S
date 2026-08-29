@@ -1,4 +1,4 @@
-#include "s/native.h"
+#include "native_test_api.h"
 #include <stdlib.h>
 #include <string.h>
 
