@@ -88,7 +88,7 @@ Value Interpreter::member(Value v,const std::string&name,SourcePos p,bool auto_c
 Value Interpreter::evaluate(const ast::ExprPtr& e){
   if(auto x=std::dynamic_pointer_cast<ast::Literal>(e))return std::visit([](auto v){return Value(v);},x->value);
   if(auto x=std::dynamic_pointer_cast<ast::Duration>(e))return DurationData{x->milliseconds};
-  if(auto x=std::dynamic_pointer_cast<ast::Variable>(e)){auto v=env_->get(x->name,x->pos);if(auto t=std::get_if<std::shared_ptr<TypeData>>(&v.data()))return instantiate(*t,x->pos);return v;}
+  if(auto x=std::dynamic_pointer_cast<ast::Variable>(e)){auto v=env_->get(x->name,x->pos);if(auto t=std::get_if<std::shared_ptr<TypeData>>(&v.data()))return instantiate(*t,x->pos);if(auto f=std::get_if<std::shared_ptr<CallableData>>(&v.data());f&&(*f)->min_args==0&&!(*f)->variadic)return call(v,{},x->pos);return v;}
   if(auto x=std::dynamic_pointer_cast<ast::Unary>(e)){auto v=evaluate(x->value);if(x->op==TokenKind::Not)return !v.truth(x->pos);if(auto n=std::get_if<std::int64_t>(&v.data()))return -*n;if(auto n=std::get_if<double>(&v.data()))return -*n;throw Error(x->pos,"Only a number can follow '-'.");}
   if(auto x=std::dynamic_pointer_cast<ast::Binary>(e)){auto a=evaluate(x->left);if(x->op==TokenKind::And&&!a.truth(x->pos))return false;if(x->op==TokenKind::Or&&a.truth(x->pos))return true;return binary(x->op,a,evaluate(x->right),x->pos);}
   if(auto x=std::dynamic_pointer_cast<ast::List>(e)){auto l=std::make_shared<ListData>();for(auto&i:x->items)l->items.push_back(evaluate(i));return l;}
@@ -99,7 +99,7 @@ Value Interpreter::evaluate(const ast::ExprPtr& e){
   if(auto x=std::dynamic_pointer_cast<ast::Member>(e))return member(evaluate(x->value),x->name,x->pos,true);
   if(auto x=std::dynamic_pointer_cast<ast::Ask>(e)){auto q=evaluate(x->question);if(!std::holds_alternative<std::string>(q.data()))throw Error(x->pos,"ask needs Text.");out_<<q.text()<<": ";std::string answer;std::getline(in_,answer);return answer;}
   if(auto x=std::dynamic_pointer_cast<ast::TryExpr>(e))return evaluate(x->value);
-  if(auto x=std::dynamic_pointer_cast<ast::Call>(e)){Value c;if(auto m=std::dynamic_pointer_cast<ast::Member>(x->callee))c=member(evaluate(m->value),m->name,m->pos,false);else c=evaluate(x->callee);std::vector<Value>a;for(auto&i:x->args)a.push_back(evaluate(i));return call(c,a,x->pos);}
+  if(auto x=std::dynamic_pointer_cast<ast::Call>(e)){Value c;if(auto m=std::dynamic_pointer_cast<ast::Member>(x->callee))c=member(evaluate(m->value),m->name,m->pos,false);else c=env_->get(std::dynamic_pointer_cast<ast::Variable>(x->callee)?std::dynamic_pointer_cast<ast::Variable>(x->callee)->name:"",x->pos);if(!std::dynamic_pointer_cast<ast::Variable>(x->callee)&&!std::dynamic_pointer_cast<ast::Member>(x->callee))c=evaluate(x->callee);std::vector<Value>a;for(auto&i:x->args)a.push_back(evaluate(i));return call(c,a,x->pos);}
   throw Error(e->pos,"This expression is not implemented.");
 }
 
