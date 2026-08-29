@@ -2,6 +2,7 @@
 #include "s/error.hpp"
 #include "s/lexer.hpp"
 #include "s/parser.hpp"
+#include "s/platform.hpp"
 #include <algorithm>
 #include <cstdlib>
 #include <fstream>
@@ -48,7 +49,7 @@ ast::Program ModuleLoader::load(const std::filesystem::path& entry){
 std::filesystem::path ModuleLoader::resolve(const std::string& name,const std::filesystem::path& from,bool& builtin,bool& native) const{
   builtin=false;
   native=false;
-  if(name=="file"||name=="path"||name=="time"||name=="math"||name=="random"||name=="os"){
+  if(name=="file"||name=="path"||name=="time"||name=="math"||name=="random"||name=="os"||is_platform_builtin(name)){
     builtin=true;
     return {};
   }
