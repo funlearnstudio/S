@@ -16,6 +16,11 @@ make double n
 make add a b
     give a + b
 
+make make_adder base
+    make inner value
+        give base + value
+    give inner
+
 make identity[T] value:T -> T
     give value
 
@@ -47,6 +52,10 @@ second_score = Score
 scores = [first_score, second_score]
 ordered = collections.sort_by scores "points"
 test.equal ordered[0].name "A"
+
+adder = make_adder 10
+closure_value = adder 5
+test.equal closure_value 15
 
 id_number = identity 42
 id_text = identity "SE"
