@@ -7,6 +7,10 @@ make lookup[T] values:Map[Text, T] key:Text -> T
 make nested[T] values:List[Map[Text, T]] -> T
     give values[0]["value"]
 
-say first [10, 20]
-say lookup ["name": "SE"] "name"
-say nested [["value": 7]]
+nums = [10, 20]
+record = ["name": "SE"]
+records = [["value": 7]]
+
+say first nums
+say lookup record "name"
+say nested records
