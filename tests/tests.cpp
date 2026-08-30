@@ -30,6 +30,12 @@ int main(){
   EXPECT(run("make add a b\n    give a + b\nsay add 4 5\n")=="9\n");
   EXPECT(run("x = [1, 2]\nx[0] = 9\nsay x[0]\nsay x.len\n")=="9\n2\n");
 
+  // Core conversions and familiar aliases.
+  EXPECT(run("say int \"42\"\nsay integer \"-7\"\nsay double \"3.5\"\nsay float 2\nsay string 99\nsay text true\nsay bool \"TRUE\"\nsay boolean \"false\"\nsay char \"é\"\nsay char 65\n")=="42\n-7\n3.5\n2\n99\ntrue\ntrue\nfalse\né\nA\n");
+  EXPECT(run("number = int \"12\"\nwhile number < 14\n    number = number + 1\nsay number\n")=="14\n");
+  EXPECT(throws_error([]{run("say int \"12x\"\n");}));
+  EXPECT(throws_error([]{run("say char \"ab\"\n");}));
+
   // User-defined types, default/explicit initialization, methods, inference, instances.
   const std::string type_program=
     "type Player\n"

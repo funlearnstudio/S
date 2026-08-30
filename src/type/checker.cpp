@@ -126,6 +126,16 @@ void Checker::install_builtins(){
   g["open"]=fn({pathish},TypeInfo(TypeKind::File),true);
   g["wait"]=fn({TypeInfo(TypeKind::Duration)},TypeInfo(TypeKind::None));
   g["bytes"]=fn({TypeInfo(TypeKind::Text)},TypeInfo(TypeKind::Bytes));
+  g["text"]=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Text));
+  g["string"]=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Text));
+  g["int"]=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Int));
+  g["integer"]=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Int));
+  g["num"]=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Num));
+  g["double"]=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Num));
+  g["float"]=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Num));
+  g["bool"]=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Bool));
+  g["boolean"]=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Bool));
+  g["char"]=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Text));
 }
 
 TypeInfo Checker::builtin_module(const std::string& name) const{
