@@ -102,6 +102,25 @@ make TestError
             else err
                 browser.text "#api-output" err.message
 
+make StartSlowRequest
+    html
+        button ["type": "button"]
+            text "Start slow request"
+
+    css
+        padding 12
+        border_radius 8
+
+    js
+        when click
+            browser.text "#api-output" "Slow request started. Press Cancel request before it finishes."
+            try
+                task = browser.get "https://httpbin.org/delay/10" ["timeout": 15000, "key": "slow-request", "dedupe": true, "throw_http": true]
+                result = async.await task
+                browser.text "#api-output" result.text
+            else err
+                browser.text "#api-output" err.message
+
 make CancelRequest
     html
         button ["type": "button"]
@@ -115,7 +134,7 @@ make CancelRequest
         when click
             cancelled = browser.cancel "slow-request"
             if cancelled
-                browser.text "#api-output" "Request cancelled."
+                browser.text "#api-output" "Cancellation requested."
             else
                 browser.text "#api-output" "No active request to cancel."
 
@@ -182,6 +201,7 @@ page "/api"
     LoadTodo
     SendPost
     TestError
+    StartSlowRequest
     CancelRequest
     Output "api-output" "Ready."
 
