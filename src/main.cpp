@@ -86,6 +86,8 @@ int doctor_command(){
   else if(const char*legacy=std::getenv("S_HOME"))std::cout<<"  S_HOME: "<<legacy<<" (legacy)\n";
   else std::cout<<"  package home: default search paths\n";
   std::cout<<"  Browser web build: built into SE; generated sites need only a browser/static host\n";
+  std::cout<<"  MongoDB adapter: requires node plus the official mongodb package when db.exec is used\n";
+  std::cout<<"  GAS adapter: requires curl when db.exec is used\n";
   std::cout<<"  Node bridge: requires node on PATH for use js\n";
   std::cout<<"  TypeScript bridge: requires ts-node/tsc on PATH for use ts\n";
   std::cout<<"  HTTPS bridge: requires curl on PATH for use https\n";
@@ -225,7 +227,7 @@ int file_command(const std::string&cmd,const std::filesystem::path&path){
 #else
     std::filesystem::path root=std::filesystem::current_path();
 #endif
-    std::string command=compiler+" -std=c++20 -O2 -Wall -Wextra -Wpedantic -Werror -Wno-misleading-indentation -I"+shell_quote((root/"include").string())+" "+shell_quote(cpp_path.string())+" "+shell_quote((root/"src/runtime/error.cpp").string())+" "+shell_quote((root/"src/runtime/value.cpp").string())+" "+shell_quote((root/"src/runtime/platform_base.cpp").string())+" "+shell_quote((root/"src/runtime/advanced.cpp").string())+" "+shell_quote((root/"src/interpreter/interpreter.cpp").string())+" "+shell_quote((root/"src/ffi/ffi.cpp").string())+" -pthread";
+    std::string command=compiler+" -std=c++20 -O2 -Wall -Wextra -Wpedantic -Werror -Wno-misleading-indentation -I"+shell_quote((root/"include").string())+" "+shell_quote(cpp_path.string())+" "+shell_quote((root/"src/runtime/error.cpp").string())+" "+shell_quote((root/"src/runtime/value.cpp").string())+" "+shell_quote((root/"src/runtime/platform_base.cpp").string())+" "+shell_quote((root/"src/runtime/advanced.cpp").string())+" "+shell_quote((root/"src/runtime/database.cpp").string())+" "+shell_quote((root/"src/interpreter/interpreter.cpp").string())+" "+shell_quote((root/"src/ffi/ffi.cpp").string())+" -pthread";
 #ifdef __linux__
     command+=" -ldl";
 #endif
