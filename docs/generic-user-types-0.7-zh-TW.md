@@ -1,6 +1,8 @@
-# SE 0.7 泛型使用者型別
+# SE 0.7 Generic User Types
 
-SE 0.7 的型別深度工作加入泛型使用者型別。目標不是增加很多特殊符號，而是讓同一個簡單的 `type` 模型可以安全地描述可重用資料結構。
+[English version](generic-user-types-0.7.md)
+
+這份版本化文件描述建立在 Structured TypeRef 之上的 generic user-type stage；它和 stable 0.6 的 generic-function Reference 分開。
 
 ## 基本語法
 
@@ -10,23 +12,11 @@ type Box[T]
 
 box = Box[Int]
     value = 42
-
-say box.value
 ```
 
-`T` 是 `Box` 的型別參數。`Box[Int]` 會把 `T` 特化成 `Int`，因此 `value` 也會是 `Int`。
+`Box[Int]` 會把 `T` 特化成 `Int`，因此 `value` 會以 `Int` 做 static check。
 
-下面的程式會在 `se check` 階段被拒絕：
-
-```se
-type Box[T]
-    value:T
-
-box = Box[Int]
-    value = "wrong"
-```
-
-## 多個型別參數
+## 多個 Type Parameter
 
 ```se
 type Pair[A, B]
@@ -38,27 +28,25 @@ pair = Pair[Text, Int]
     second = 7
 ```
 
-型別參數數量必須完全符合宣告。`Pair[Int]` 或 `Pair[Int, Text, Bool]` 都是靜態錯誤。
+Type argument 數量會在 static checking 階段驗證。
 
-## 欄位型別與預設值
+## Typed / Required Field
 
-舊有 SE 寫法仍然有效：
+既有 default field 仍然有效：
 
 ```se
 type User
     name = ""
-    age = 0
 ```
 
-0.7 也允許明確欄位型別：
+也可以寫明確型別與 default：
 
 ```se
 type User
     name:Text = ""
-    age:Int = 0
 ```
 
-沒有預設值的 typed field 是必要欄位：
+沒有 default 的 typed field 在 object initialization 時是必要欄位：
 
 ```se
 type User
@@ -70,9 +58,7 @@ user = User
     age = 15
 ```
 
-如果必要欄位沒有在 indented initialization 中提供，checker 會報錯。
-
-## 方法可以使用型別參數
+## Method 與 Type Parameter
 
 ```se
 type Box[T]
@@ -85,52 +71,34 @@ type Box[T]
         value = next
 ```
 
-對 `Box[Int]` 而言，checker 會把 `get` 視為回傳 `Int`，並要求 `replace` 的參數是 `Int`。對 `Box[Text]` 則會自動特化成 `Text`。
+對 `Box[Int]` 而言，`get` 回傳 `Int`，`replace` 也只接受 `Int`。
 
-## 泛型函式與泛型型別可以一起使用
+## Generic Function + Generic User Type
 
 ```se
 make unwrap[T] box:Box[T] -> T
     give box.value
-
-box = Box[Int]
-    value = 42
-
-say unwrap box
 ```
 
-呼叫 `unwrap box` 時，checker 會從 `Box[Int]` 推斷 `T = Int`，所以回傳型別也是 `Int`。
+傳入 `Box[Int]` 時，`T` 會綁定成 `Int`，包含回傳型別。
 
-## 巢狀泛型型別
+## Nested Specialization
+
+Generic substitution 可以繼續穿過 nested user/collection type：
 
 ```se
-type Box[T]
-    value:T
-
 type Wrapper[T]
     item:Box[T]
-
-box = Box[Int]
-    value = 42
-
-wrapper = Wrapper[Int]
-    item = box
 ```
 
-型別替換會遞迴進入使用者型別、List、Set 與 Map，而不是在外層退化成 Unknown。
+## Runtime Model
 
-## 與 SE 0.6 的相容性
+此 stage 採 runtime erasure：不同 specialization 共用 runtime type representation，而完整 specialization information 由 Static Checker 保留與驗證。
 
-非泛型 `type`、預設值欄位、方法與物件初始化語法保持相容。泛型使用者型別採用 PascalCase 型別名稱，例如 `Box[Int]`。這也讓 parser 能把型別套用與普通 collection indexing 清楚區分；一般值仍建議使用小寫名稱。
+## Compatibility
 
-## Runtime 模型
-
-目前泛型使用者型別採 **runtime erasure**：`Box[Int]` 與 `Box[Text]` 共用同一個 runtime `TypeData` 定義，型別參數的安全性由 static checker 保證。這避免為泛型引入額外 runtime 複雜度，同時保留 SE 的簡單執行模型。
-
-因此 0.7 的承諾是：
-
-> 表面仍然只是 `type Box[T]`，但 compiler 會保留並檢查它的完整特化型別。
+非泛型 user type、default field、method 與一般 object initialization 保持有效。Generic type application 使用 `Box[Int]` 等形式，讓 type specialization 和一般 value indexing 維持清楚區別。
 
 ## 目前邊界
 
-這個階段提供 invariant 的泛型使用者型別與特化，不包含 traits / interfaces、variance、generic constraints、higher-kinded types 或 specialization overloading。這些能力只有在能維持 `Simple at every level` 的前提下才會考慮加入。
+此階段涵蓋 invariant generic user type 與 specialization。Traits/interfaces、variance、generic constraints、higher-kinded type、specialization overloading 不會因這份文件而自動視為已支援；只有後續 implementation 明確加入時才算完成。
