@@ -1,0 +1,27 @@
+make Button text
+    html
+        button text
+
+    css
+        padding 12
+        border_radius 8
+
+        button:hover
+            opacity 0.8
+
+    js
+        when click
+            say text
+
+make Card text
+    text text
+
+    style
+        padding 20
+        border_radius 12
+
+page "/"
+    Card "Hello"
+    Button "Save"
+    Button "Cancel"
+    Button "Next"
