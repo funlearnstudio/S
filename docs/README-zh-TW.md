@@ -43,7 +43,13 @@
 - [Runtime Design](runtime-design-zh-TW.md)
 - [技術參考](technical-reference-zh-TW.md)
 
-## 5. Versioned Development Documents
+## 5. Tooling / Editor 支援
+
+- [VS Code Extension](../vscode/README-zh-TW.md) — Syntax highlighting、IntelliSense、navigation、Run/Check/Build command。
+- [GitHub Syntax Highlighting](github-syntax-highlighting-zh-TW.md) — TextMate grammar 與 GitHub Linguist requirement。
+- [Linguist Submission Bundle](../linguist/README-zh-TW.md) — 未來 upstream Linguist contribution 的準備資料。
+
+## 6. Versioned Development Documents
 
 這些文件描述特定開發階段，和 stable language reference 分開：
 
@@ -58,7 +64,7 @@
 
 帶版本號的 design document 不代表其中每個項目都已經進入目前 stable Release。
 
-## 6. Stable / Current Source
+## 7. Stable / Current Source
 
 - **Stable Release**：一般安裝與 CLI 使用以目前 GitHub Release 為準。
 - **Current Source**：`main` 可能已包含更新的 Compiler / Web 工作，但版本字串仍處於 stable line。
