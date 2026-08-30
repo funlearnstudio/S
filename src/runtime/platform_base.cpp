@@ -23,4 +23,11 @@
 #undef module_type
 #undef callable
 
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtrigraphs"
+#endif
 #include "game_ext.cpp"
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
