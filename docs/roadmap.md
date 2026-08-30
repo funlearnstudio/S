@@ -1,25 +1,82 @@
-# Roadmap
+# SE Roadmap
 
-## 0.1 — core language
+[繁體中文版](roadmap-zh-TW.md)
 
-Implemented: indentation lexer, Pratt parser/AST, inferred primitive types, safe List indexing, control flow, functions, interpreter, REPL, diagnostics, static checking, and S -> C++20 -> native builds.
+This roadmap describes direction, not guaranteed release contents. Stable release behavior is documented in the main guides; versioned design documents describe specific development stages.
 
-## 0.2 — core expansion
+## Established foundation
 
-Implemented in the 0.2 line:
+SE already has a C++20 implementation with an indentation-aware lexer, Pratt parser, AST, static checker/type inference, interpreter, native C++ backend, runtime values, modules, user types, collections, recoverable errors, testing, file/path/time utilities, JSON/HTTP capabilities, native C ABI interoperability, and Web compiler work.
 
-- user-defined `type`, inferred fields, methods, implicit current-object field access, and simple object initialization
-- multi-file modules with `use`, project/std/package resolution, private `_name` convention, graph checking, and circular-import errors
-- typed List, Map, and Set operations and iteration
-- recoverable runtime Error values with `try`, `try expr`, and `fail`
-- file, path, time, and Duration support using C++20 resource/path/time facilities
-- C ABI native modules with scalar bindings, opaque managed handles, fallible native calls, and C++ interoperability through small C wrappers
-- interpreter/native parity tests on macOS and Linux CI
+## Type system
 
-## 0.3 — connected programs
+Planned or evolving areas include:
 
-Candidates after the 0.2 semantics settle: tasks and structured concurrency, networking, package metadata/registry, richer inferred generic collection APIs, a binding generator for more C ABI shapes, and an LSP.
+- more precise generic collection propagation
+- generic user types where the implementation/revision supports them
+- constraints/protocol/trait-like capabilities only if they can preserve SE's simple syntax
+- safer narrowing of broad/unknown values
 
-## Later
+## Pattern matching
 
-Evaluate direct lower-level/LLVM code generation only when measurement justifies the added compiler complexity. Keep arbitrary C++ ABI details, raw pointers, templates, and manual ownership outside normal S source.
+Potential future depth:
+
+- destructuring patterns
+- guards
+- more natural Option/Result matching
+- exhaustiveness analysis
+
+Current stable matching should not be described as having these features unless the implementation actually includes them.
+
+## Async and concurrency
+
+Directions include:
+
+- stronger scheduling/runtime structure
+- non-blocking I/O integrations
+- a safe concurrency model
+- keeping direct thread/lock management out of ordinary SE source where possible
+
+## Web and networking
+
+SE Web is already an active compiler target. Further work can include:
+
+- deeper multi-file component/project integration
+- more browser platform APIs
+- deployment adapters/tooling
+- WebSocket or streaming/event capabilities
+- stronger production server architecture
+
+Browser and server capability boundaries should remain explicit.
+
+## Data and database
+
+Future database depth may include richer SQL/database adapters, transactions, prepared queries and resource/connection management while keeping the simple module/API model.
+
+## Tooling
+
+Potential tooling work:
+
+- LSP
+- completion / hover / diagnostics
+- formatter
+- debugger integrations
+- package manager / registry
+- distribution improvements
+
+## Compiler and build system
+
+Potential areas:
+
+- native optimization improvements
+- caching / incremental build
+- relocatable installation improvements
+- optional additional code-generation backends when they justify their complexity
+
+An LLVM backend is an option, not a requirement for SE's identity.
+
+## Long-term rule
+
+> **Simple at every level.**
+
+SE should grow by moving complexity into the compiler, runtime, standard library and tooling rather than forcing ordinary programs to absorb more punctuation, manual ownership or platform boilerplate.
