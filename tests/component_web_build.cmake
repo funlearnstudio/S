@@ -28,7 +28,23 @@ endif()
 if(NOT css MATCHES "\\.se-Button" OR NOT css MATCHES "padding: 12px" OR NOT css MATCHES "border-radius: 8px")
   message(FATAL_ERROR "Generated component CSS is missing scoped Button styles\n${css}")
 endif()
+if(NOT css MATCHES "\\.se-Button:hover" OR NOT css MATCHES "opacity: 0.8")
+  message(FATAL_ERROR "Generated component CSS is missing scoped nested selector\n${css}")
+endif()
 if(NOT js MATCHES "addEventListener\\(\"click\"" OR NOT js MATCHES "Save" OR NOT js MATCHES "Cancel" OR NOT js MATCHES "Next")
   message(FATAL_ERROR "Generated JavaScript is missing instance event bindings\n${js}")
 endif()
-message(STATUS "SE component web build passed")
+
+execute_process(
+  COMMAND "${SE_EXE}" web build "${SE_ROOT}/examples/component-web-invalid.se" "${SE_WORK}/invalid"
+  RESULT_VARIABLE invalid_result
+  OUTPUT_VARIABLE invalid_output
+  ERROR_VARIABLE invalid_error
+)
+if(invalid_result EQUAL 0)
+  message(FATAL_ERROR "Invalid component arity unexpectedly built successfully")
+endif()
+if(NOT invalid_error MATCHES "Component 'Button' needs 1 value\\(s\\), but got 2")
+  message(FATAL_ERROR "Unexpected component diagnostic:\n${invalid_output}\n${invalid_error}")
+endif()
+message(STATUS "SE component web build and diagnostics passed")
