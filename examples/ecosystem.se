@@ -1,0 +1,29 @@
+use math
+use data
+use game
+
+nums = [1, 2, 3, 4]
+data.append nums 5
+data.insert nums 0 0
+last = data.pop nums
+
+say last
+say math.factorial 5
+say math.gcd 84 30 18
+say math.mean nums
+say math.median nums
+say math.clamp 12 0 10
+
+record = ["name": "SE"]
+data.set record "version" 9
+say data.get record "name"
+say data.get record "version"
+
+scene = game.new 320 200 "SE Game"
+game.background scene "#101820"
+game.rect scene 20 20 120 60 "#4ade80" true
+game.circle scene 220 80 35 "#60a5fa" true
+game.line scene 20 150 300 150 "white" 3
+game.text scene "SE Game" 95 180 20 "white"
+markup = game.html scene
+say markup.len
