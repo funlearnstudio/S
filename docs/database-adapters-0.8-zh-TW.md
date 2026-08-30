@@ -1,123 +1,66 @@
 # SE Database Adapters（0.8 foundation）
 
-SE 保留原本的本機 `db.open / db.set / db.get` Text key/value store，同時加入統一的遠端 database adapter 介面。遠端資料庫不各自發明一整套 SE 語法，而是共用 `db.connect`、`db.exec`、`db.adapter`。
+[English version](database-adapters-0.8.md)
 
-## MongoDB
+這份版本化文件描述 0.8 database-adapter foundation。SE 保留本機 `db.open` / `db.set` / `db.get` Text key/value store，同時建立共用 remote data adapter model。
+
+## 統一 Adapter Interface
 
 ```se
 use db
 
-uri = "mongodb+srv://USER:PASSWORD@cluster.example.mongodb.net/"
+connection = try db.connect adapter endpoint database collection
+result = try db.exec connection action payload
+say db.adapter connection
+```
+
+目標是把不同 database/service 的差異留在 adapter / Runtime，而不是每個 backend 都發明新的 top-level 語法。
+
+## MongoDB Adapter
+
+概念寫法：
+
+```se
+use db
+
 mongo = try db.connect "mongodb" uri "myapp" "users"
-
-user = try db.exec mongo "find_one" "{\"name\":\"SE\"}"
-say user
+user = try db.exec mongo "find_one" query_json
 ```
 
-支援的 MongoDB actions：
+此階段 implementation 的 action 涵蓋 find、insert、update/replace、delete、count 等常見操作。
 
-- `find_one`
-- `find_many`
-- `insert_one`
-- `insert_many`
-- `update_one`
-- `replace_one`
-- `delete_one`
-- `delete_many`
-- `count`
+目前 MongoDB execution path 依賴 Node.js 與官方 `mongodb` package。`db.connect` 建立 connection description，真正 remote operation 在 `db.exec` 時發生。
 
-`update_one` payload 範例：
+## Google Apps Script Adapter
 
-```json
-{
-  "filter": {"name": "SE"},
-  "update": {"$set": {"score": 10}},
-  "options": {"upsert": true}
-}
-```
-
-MongoDB adapter 在真正執行 `db.exec` 時使用 Node.js 的官方 `mongodb` package。專案環境需要：
-
-```sh
-npm install mongodb
-```
-
-`db.connect` 本身只建立連線描述，不會立刻連到 MongoDB；因此可以在沒有網路的測試中驗證 adapter 設定。
-
-## Google Apps Script（GAS）
-
-GAS adapter 連到已部署的 Apps Script Web App HTTPS endpoint：
+已部署的 Apps Script Web App 可作為 HTTPS adapter endpoint：
 
 ```se
-use db
-
-store = try db.connect "gas" "https://script.google.com/macros/s/DEPLOYMENT_ID/exec"
+store = try db.connect "gas" endpoint
 result = try db.exec store "list" "{}"
-say result
 ```
 
-SE 送出的 JSON envelope 是：
+Adapter 會送出 action/payload envelope，再透過 HTTPS transport 取得 service response。
 
-```json
-{
-  "action": "list",
-  "payload": "{}"
-}
-```
+## Server / Browser 邊界
 
-GAS 可以用 `doPost` 接收：
-
-```javascript
-function doPost(e) {
-  const request = JSON.parse(e.postData.contents);
-  const payload = JSON.parse(request.payload || "{}");
-
-  let result;
-  if (request.action === "list") {
-    result = { ok: true, rows: [] };
-  } else {
-    result = { ok: false, error: "unknown action" };
-  }
-
-  return ContentService
-    .createTextOutput(JSON.stringify(result))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-```
-
-GAS transport 使用 HTTPS/curl，會跟隨 Apps Script Web App redirect。
-
-## 為什麼使用統一介面
-
-同類能力集中成：
-
-```se
-db.connect adapter ...
-db.exec connection action payload
-db.adapter connection
-```
-
-因此之後加入 PostgreSQL、MySQL、Redis 等 adapter 時，不必再讓 SE 出現一堆互不相容的頂層語法。這符合 `Simple at every level`：資料庫差異由 adapter/runtime 承擔，SE 程式保持一致。
-
-## 安全界線
-
-MongoDB URI、帳號密碼、API token 等秘密只能放在 SE server/backend 環境，例如環境變數。不要把它們寫進 browser `frontend/app.se`，因為 `se web build` 會產生使用者可以直接讀到的 `app.js`。
-
-推薦模式：
+Database connection information 應保留在 backend：
 
 ```text
-Browser SE
-   ↓ HTTPS
-SE backend/API
-   ↓
-db.connect / db.exec
-   ↓
-MongoDB / GAS / future adapters
+SE browser app
+    ↓ HTTPS / API
+SE backend
+    ↓ db.connect / db.exec
+remote database / service
 ```
 
-## 目前界線
+不要把 database URI、credential、token 等只適合 server 保存的資訊寫進會輸出成 browser JavaScript 的 source。
 
-- 遠端 payload/result 目前以 JSON Text 為交換格式，還沒有直接映射成完整 typed document model。
-- MongoDB runtime adapter 目前依賴 Node.js + `mongodb` package；它還不是內嵌 C++ MongoDB driver。
-- GAS adapter 依賴 curl。
-- CI 不使用真實第三方 credentials；測試只驗證 adapter 建立、型別、跨平台 runtime linkage。真實服務測試應使用專門的 integration environment。
+## 目前邊界
+
+- Remote payload/result 在此 foundation 主要以 JSON Text 交換。
+- MongoDB 依賴 external Node.js driver，不是 embedded C++ driver。
+- GAS transport 使用 HTTPS/curl path。
+- CI 可驗證 adapter/runtime 行為，但不應依賴真實第三方帳號或 credential。
+
+後續 adapter 應繼續重用 `db.connect` / `db.exec`，而不是再增加新的語言 syntax layer。
