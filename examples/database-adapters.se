@@ -1,0 +1,11 @@
+use db
+
+mongo = try db.connect "mongodb" "mongodb://localhost:27017" "app" "users"
+gas = try db.connect "gas" "https://script.google.com/macros/s/example/exec"
+
+say db.adapter mongo
+say db.adapter gas
+
+# Real operations use JSON Text and are fallible:
+# result = try db.exec mongo "find_one" "{\"name\":\"SE\"}"
+# result = try db.exec gas "list" "{}"
