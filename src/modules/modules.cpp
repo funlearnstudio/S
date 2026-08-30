@@ -50,7 +50,7 @@ ast::Program ModuleLoader::load(const std::filesystem::path& entry){
 std::filesystem::path ModuleLoader::resolve(const std::string& name,const std::filesystem::path& from,bool& builtin,bool& native) const{
   builtin=false;
   native=false;
-  if(name=="file"||name=="path"||name=="time"||name=="math"||name=="random"||name=="os"||is_platform_builtin(name)||is_advanced_builtin(name)){
+  if(name=="file"||name=="path"||name=="time"||name=="math"||name=="random"||name=="os"||combined_platform_builtin(name)){
     builtin=true;
     return {};
   }
