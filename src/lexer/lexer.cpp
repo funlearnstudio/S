@@ -95,8 +95,13 @@ std::vector<Token> Lexer::scan() {
       ++i; add(TokenKind::String,value,col); continue;
     }
     auto two = i+1<source_.size()?source_.substr(i,2):"";
-    if (two=="**"||two=="=="||two=="!="||two==">="||two=="<="||two==".."||two=="->") {
-      TokenKind k=two=="**"?TokenKind::Power:two=="=="?TokenKind::EqualEqual:two=="!="?TokenKind::BangEqual:two==">="?TokenKind::GreaterEqual:two=="<="?TokenKind::LessEqual:two==".."?TokenKind::Range:TokenKind::Arrow;
+    if (two=="**"||two=="=="||two=="!="||two==">="||two=="<="||two==".."||two=="->"||two=="+="||two=="-="||two=="*="||two=="/="||two=="%=") {
+      TokenKind k=two=="**"?TokenKind::Power:
+        two=="=="?TokenKind::EqualEqual:two=="!="?TokenKind::BangEqual:
+        two==">="?TokenKind::GreaterEqual:two=="<="?TokenKind::LessEqual:
+        two==".."?TokenKind::Range:two=="->"?TokenKind::Arrow:
+        two=="+="?TokenKind::PlusEqual:two=="-="?TokenKind::MinusEqual:
+        two=="*="?TokenKind::StarEqual:two=="/="?TokenKind::SlashEqual:TokenKind::PercentEqual;
       add(k,two,col); i+=2; continue;
     }
     TokenKind k;
