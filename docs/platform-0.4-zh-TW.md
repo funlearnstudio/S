@@ -1,64 +1,49 @@
 # SE 0.4 平台基礎
 
-本文件是 `platform-0.4.md` 的繁體中文版。
+[English version](platform-0.4.md)
 
-SE 0.4 的重點是讓語言從「可以執行程式」開始長成「可以建立專案與自我診斷的平台」。
+這份版本化文件記錄 0.4 platform stage：SE 開始從小型可執行語言擴展成 project/tooling platform，同時維持 **Simple at every level**。
 
-## `.help`
+## Contextual Help
 
-任何值都可以查詢基本說明：
+Value 可以透過 `.help` 查基本說明：
 
 ```se
 nums = [1, 2, 3]
 say nums.help
 ```
 
-當 Checker 發現不存在的 member，也會提示可以使用 `value.help`。
+Unknown-member diagnostics 也可以引導使用者查看這個 help path。
 
-## CLI help
+## CLI Tooling
 
 ```bash
 se help
-```
-
-顯示目前可用指令。
-
-## doctor
-
-```bash
 se doctor
 ```
 
-用來查看版本、平台、C++ compiler、`SE_HOME` / `S_HOME`、目前目錄，以及 Node/TypeScript bridge 的環境需求。
+`se doctor` 用來查看版本、平台、compiler/tool availability、package-home 設定與目前目錄等環境資訊。
 
-## 建立 App
+## Project Scaffolding
 
 ```bash
 se new app myapp
-```
-
-產生基本專案結構與測試檔。
-
-## 建立 Web 專案
-
-```bash
 se new web mysite
 ```
 
-0.4 建立了 backend/frontend scaffold；後續 0.5 才把真正 HTTP server/router 與 browser bridge 補完整。
+0.4 建立 App / Web project structure；後續版本才加入更深入的 HTTP/router/browser 行為。因此這份文件是歷史 version stage，不是目前完整 Web Reference。
 
-## math
+## 此階段加入的 Standard Modules
+
+### math
 
 ```se
 use math
 say math.pi
 say math.sqrt 25
-say math.pow 2 8
 ```
 
-包含 `sqrt`、`abs`、`floor`、`ceil`、`round`、`pow`、`min`、`max`。
-
-## random
+### random
 
 ```se
 use random
@@ -66,7 +51,7 @@ n = random.int 1 10
 x = random.num
 ```
 
-## os
+### os
 
 ```se
 use os
@@ -74,18 +59,22 @@ say os.platform
 say os.cwd
 ```
 
-也提供環境變數相關功能。
+## Package Home Naming
 
-## 套件目錄
-
-0.4 開始優先使用：
+平台命名遷移優先使用：
 
 ```text
 SE_HOME/packages
 ```
 
-並保留 `S_HOME/packages` 作為舊名稱 fallback。
+需要 compatibility 時仍可保留舊 `S_HOME/packages` fallback。
 
-## 版本定位
+## Native Bridge Foundation
 
-0.4 是 platform foundation，不代表當時所有 Web、DB、HTTPS 或完整 package ecosystem 都已完成。後續能力請看 0.5、0.6 文件。
+C ABI / `.snative` / Bytes / managed handle / `se bind` 形成 systems interoperability layer，讓一般 SE 程式不需要理解任意 C++ ABI detail。
+
+## 設計方向
+
+0.4 留下的重要方向仍延續到現在：新能力應優先透過一致的 module、runtime service 與 tooling 加入，而不是大量增加新語法。
+
+目前正式用法請看 [文件總覽](README-zh-TW.md)。後續歷史 stage 可看 [SE 0.5 Platform](platform-0.5-zh-TW.md) 與 [SE 0.6 進階功能](advanced-0.6-zh-TW.md)。
