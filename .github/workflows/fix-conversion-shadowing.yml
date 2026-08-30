@@ -1,0 +1,29 @@
+name: Fix conversion shadowing
+
+on:
+  push:
+    branches:
+      - feature-core-conversions-v2
+    paths:
+      - tools/fix_conversion_shadowing.py
+      - .github/workflows/fix-conversion-shadowing.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature-core-conversions-v2
+      - run: python3 tools/fix_conversion_shadowing.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/interpreter/interpreter.cpp src/type/checker.cpp
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: make conversion names shadowable"
+          git push origin HEAD:feature-core-conversions-v2
