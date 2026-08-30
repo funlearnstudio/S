@@ -1,30 +1,33 @@
-# SE 型別系統
+# SE 型別與方法
 
-本文件是 `types.md` 的繁體中文版。
+[English version](types.md)
 
-SE 採用「盡量推斷、需要時才標註」的靜態型別方向。
+SE 採用 **能推斷就推斷、需要時再標註** 的靜態型別方向。沒有寫出 annotation，不代表沒有 type checking。
 
-## 基本型別
+## 核心 Value Family
 
-常見 Runtime / Checker 型別包括：
+常見 Checker / Runtime type：
 
-- `None`
-- `Bool`
-- `Int`
-- `Num`
-- `Text`
-- `Bytes`
-- `List`
-- `Map`
-- `Set`
-- `Function`
-- user-defined Object
-- Module
-- File / Path
-- Duration / Time
-- NativeHandle
+```text
+None
+Bool
+Int
+Num
+Text
+Bytes
+List
+Map
+Set
+Function
+Object
+Error
+Duration
+Path / File
+Module
+NativeHandle
+```
 
-## 型別推斷
+## Type Inference
 
 ```se
 age = 15
@@ -32,40 +35,74 @@ name = "SE"
 active = true
 ```
 
-Checker 可以從值推斷 Int、Text、Bool，因此一般程式不需要重複寫型別。
+Checker 會從 literal 與 expression 推斷明確型別。
 
-## 明確函式型別
+## Typed Function
 
-SE 0.6 泛型函式可以使用參數與回傳型別標註：
+```se
+make add a:Int b:Int -> Int
+    give a + b
+```
+
+當 API boundary 或 inference 不夠明確時，可以加入 annotation。
+
+## Generic Function
 
 ```se
 make identity[T] value:T -> T
     give value
 ```
 
-同一個 `T` 在呼叫時必須保持一致的型別關係。
+同一個 generic parameter 在一次 call 中必須維持一致的型別關係。
 
-## Collection element
+## User-defined Type
 
-List 等集合會盡可能保存元素型別資訊，但部分高階 generic collection API 目前仍可能回傳較寬鬆的 Unknown，這是型別系統後續要繼續加強的地方。
+```se
+type Player
+    name = ""
+    hp = 100
+
+    make hit damage
+        hp = hp - damage
+
+    make alive
+        give hp > 0
+
+player = Player
+    name = "Steve"
+
+player.hit 20
+say player.hp
+```
+
+Field type 通常從 default value 推斷，也可以在支援的位置加入明確 annotation。不相容 assignment 會成為 checker error。
+
+## Method Field Lookup
+
+Method 內未被 local variable shadow 的 field 名稱可以解析成 current object field：
+
+```se
+make hit damage
+    hp = hp - damage
+```
+
+因此一般 SE code 不必每次都強制寫 `self.`。
+
+## Object Lifetime
+
+每次建立 object 都會取得獨立 field storage。一般 SE 程式不管理 raw pointer 或 object memory；生命週期由 runtime 管理。
+
+## Collection Typing
+
+List / Map / Set 在 Checker 能推斷時會保留型別資訊。部分 heterogeneous data 或 platform API 可能只能得到較寬鬆的型別。
 
 ## Unknown
 
-`Unknown` 表示 Checker 在靜態階段無法確定精確型別，例如 heterogeneous JSON parse 結果或某些 generic platform API。Unknown 不是「關掉型別安全」；需要 member/index 等操作時仍可能要求更明確的型別資訊。
-
-## User type
-
-```se
-type User
-    name = ""
-    score = 0
-```
-
-建立 object 後，Checker 知道其 fields / methods。
+`Unknown` 表示靜態階段無法確定精確型別，例如 heterogeneous JSON 或部分 dynamic platform API。它不是「關掉整個 type checker」；需要 member/index 等操作時仍可能要求更明確資訊。
 
 ## Option / Result
 
-SE 0.6 用 managed runtime types 表示可能缺值或成功/失敗：
+SE 提供 managed Option / Result helper，讓「可能沒有值」或「成功／失敗」可以成為明確資料：
 
 ```se
 use option
@@ -75,6 +112,6 @@ use result
 answer = result.ok 42
 ```
 
-## 長期方向
+## Generic User Type 的版本邊界
 
-目前 generics 主要是 generic functions。完整 generic user types、constraints、精確 collection type propagation 與 narrowing 仍屬後續型別系統工作。
+Generic function 已屬既有語言能力；Generic user type 與更深的 type-system work 另外放在帶版本號的設計／Reference 文件中，避免把未來工作和 stable release 混在一起。
