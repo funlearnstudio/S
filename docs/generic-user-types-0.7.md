@@ -65,11 +65,11 @@ type Box[T]
     make get -> T
         give value
 
-    make set next:T
+    make replace next:T
         value = next
 ```
 
-For `Box[Int]`, `get` returns `Int` and `set` accepts `Int`.
+For `Box[Int]`, `get` returns `Int` and `replace` accepts `Int`.
 
 ## Generic functions over user types
 
