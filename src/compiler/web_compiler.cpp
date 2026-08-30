@@ -23,6 +23,14 @@ std::string quote_js(const std::string& value){
   out<<'"'; return out.str();
 }
 
+std::string html_escape(const std::string& value){
+  std::string out;out.reserve(value.size());
+  for(char c:value){
+    switch(c){case '&':out+="&amp;";break;case '<':out+="&lt;";break;case '>':out+="&gt;";break;case '"':out+="&quot;";break;default:out+=c;}
+  }
+  return out;
+}
+
 std::string literal_text(const ast::ExprPtr& expr,SourcePos p,const std::string& what){
   auto literal=std::dynamic_pointer_cast<ast::Literal>(expr);
   if(!literal)throw Error(p,what+" must be literal Text in an SE web build.");
@@ -57,12 +65,13 @@ const __seRange=(a,b)=>{const out=[];for(let i=a;i<=b;i+=1)out.push(i);return ou
 const __seIn=(value,container)=>container instanceof Set?container.has(value):Array.isArray(container)?container.includes(value):typeof container==='string'?container.includes(value):container&&typeof container==='object'?Object.prototype.hasOwnProperty.call(container,value):false;
 const __seAsk=(question)=>globalThis.prompt?globalThis.prompt(String(question))??'':'';
 const ui={
-  el(tag,text=''){const node=document.createElement(String(tag));if(text!==''&&text!==null&&text!==undefined)node.textContent=String(text);return node;},
-  add(parent,child){parent.append(child);return parent;},
+  el(tag,text='',attrs={}){const node=document.createElement(String(tag));if(text!==''&&text!==null&&text!==undefined)node.textContent=String(text);for(const [name,value] of Object.entries(attrs||{}))node.setAttribute(String(name),String(value));return node;},
+  add(parent,...children){parent.append(...children);return parent;},
   mount(node,target='#app'){const host=typeof target==='string'?document.querySelector(target):target;if(!host)throw new Error(`SE ui.mount target not found: ${target}`);host.replaceChildren(node);return node;},
   find(selector){return document.querySelector(String(selector));},
   all(selector){return [...document.querySelectorAll(String(selector))];},
   attr(node,name,value){node.setAttribute(String(name),String(value));return node;},
+  attrs(node,values){for(const [name,value] of Object.entries(values||{}))node.setAttribute(String(name),String(value));return node;},
   text(node,value){node.textContent=String(value);return node;},
   html(node,value){node.innerHTML=String(value);return node;},
   value(node){return node&&'value' in node?node.value:'';},
@@ -206,7 +215,7 @@ ast::Program runtime_program(const ast::Program& program){
 
 WebBundle WebCompiler::generate(const ast::Program& program){
   auto title=title_from_program(program);auto css=css_from_program(program);auto runtime=runtime_program(program);auto js=JsEmitter{}.emit(runtime);
-  std::string html="<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n  <title>"+title+"</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <div id=\"app\"></div>\n  <script type=\"module\" src=\"./app.js\"></script>\n</body>\n</html>\n";
+  std::string html="<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n  <title>"+html_escape(title)+"</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <div id=\"app\"></div>\n  <script type=\"module\" src=\"./app.js\"></script>\n</body>\n</html>\n";
   std::string ts="// TypeScript-compatible output generated from SE.\n"+js;
   return {std::move(html),std::move(css),std::move(js),std::move(ts)};
 }
