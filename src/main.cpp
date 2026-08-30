@@ -1,6 +1,7 @@
 #include "s/bindgen.hpp"
 #include "s/checker.hpp"
 #include "s/compiler.hpp"
+#include "s/component_web.hpp"
 #include "s/error.hpp"
 #include "s/interpreter.hpp"
 #include "s/lexer.hpp"
@@ -142,7 +143,7 @@ int web_build_command(const std::filesystem::path&source_path,const std::filesys
   auto source=read_file(source_path);
   try{
     s::Lexer lexer(source);s::Parser parser(lexer.scan());auto program=parser.parse();
-    auto bundle=s::WebCompiler{}.generate(program);
+    auto bundle=s::has_component_web(program)?s::ComponentWebCompiler{}.generate(program):s::WebCompiler{}.generate(program);
     std::filesystem::create_directories(output);
     write_output_file(output/"index.html",bundle.html);
     write_output_file(output/"style.css",bundle.css);
@@ -195,20 +196,25 @@ int new_project(const std::string&kind,const std::filesystem::path&root){
       "has_name = body != \"\"\n"
       "test.ok has_name\n");
     write_new_file(root/"frontend/app.se",
-      "ui.page \"SE Web\"\n\n"
-      "ui.style \"body\" [\"font-family\": \"system-ui, sans-serif\", \"margin\": \"2rem\"]\n"
-      "ui.style \"button\" [\"padding\": \".6rem 1rem\"]\n\n"
-      "root = ui.el \"main\"\n"
-      "title = ui.el \"h1\" \"SE Web\"\n"
-      "button = ui.el \"button\" \"Hello\"\n"
-      "output = ui.el \"pre\" \"Ready\"\n"
-      "ui.add root title\nui.add root button\nui.add root output\n\n"
-      "make clicked event\n"
-      "    ui.text output \"Hello from SE browser code\"\n\n"
-      "ui.on button \"click\" clicked\n"
-      "ui.mount root\n");
+      "make Button text\n"
+      "    html\n"
+      "        button text\n\n"
+      "    css\n"
+      "        padding 12\n"
+      "        border_radius 8\n\n"
+      "    js\n"
+      "        when click\n"
+      "            say text\n\n"
+      "make Card text\n"
+      "    text text\n\n"
+      "    style\n"
+      "        padding 20\n\n"
+      "page \"/\"\n"
+      "    Card \"Hello from SE Web\"\n"
+      "    Button \"Save\"\n"
+      "    Button \"Cancel\"\n");
     write_new_file(root/"README.md",
-      "# "+root.filename().string()+"\n\nSE web project with an SE backend and a browser frontend authored in SE.\n\n- `backend/main.se` - SE HTTP server/router\n- `backend/tests/` - backend route tests\n- `frontend/app.se` - page structure, CSS and browser behavior in SE\n\nBuild frontend:\n\n```sh\nse web build frontend/app.se frontend/dist\n```\n\nThis generates deployable `index.html`, `style.css`, `app.js`, and `app.ts`.\n\nRun backend:\n\n```sh\nse check-all backend\nse test backend\nse run backend/main.se\n```\n\nThe browser compiler is a growing SE subset. Keep database credentials on the backend; do not place MongoDB or other private connection strings in frontend SE files.\n");
+      "# "+root.filename().string()+"\n\nSE web project with an SE backend and a browser frontend authored in SE.\n\n- `backend/main.se` - SE HTTP server/router\n- `backend/tests/` - backend route tests\n- `frontend/app.se` - reusable HTML/CSS/JS components in normal SE `make` blocks\n\nBuild frontend:\n\n```sh\nse web build frontend/app.se frontend/dist\n```\n\nThis generates deployable `index.html`, `style.css`, `app.js`, and `app.ts`.\n\nRun backend:\n\n```sh\nse check-all backend\nse test backend\nse run backend/main.se\n```\n\nThe browser compiler is a growing SE subset. Keep database credentials on the backend; do not place MongoDB or other private connection strings in frontend SE files.\n");
     std::cout<<"Created SE web project at "<<root.string()<<"\n";
     std::cout<<"Frontend: cd "<<root.string()<<" && se web build frontend/app.se frontend/dist\n";
     std::cout<<"Backend:  se test backend && se run backend/main.se\n";
