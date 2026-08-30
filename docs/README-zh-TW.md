@@ -70,6 +70,22 @@
 - **Current Source**：`main` 可能已包含更新的 Compiler / Web 工作，但版本字串仍處於 stable line。
 - **Roadmap / Design**：未來階段工作和 released behavior 分開標示。
 
+## 文件架構
+
+這次重整讓每一類資訊只有一條 canonical 路徑：
+
+```text
+安裝 → 快速開始 → 完整教學 → 語言參考
+                           ↓
+                      主題 Reference
+                           ↓
+                 技術 / Web / Tooling
+                           ↓
+                Versioned Design / Roadmap
+```
+
+舊的重複 guide filename 會保留作既有連結相容入口，但不再維護另一份相同長教學，而是導向 canonical 文件。
+
 ## 文件整理規則
 
 1. 新使用者 source 一律使用 `.se`；`.s` 只出現在 compatibility/history。
