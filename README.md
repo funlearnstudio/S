@@ -6,13 +6,13 @@ SE is a low-punctuation, safety-first programming language implemented in C++20.
 
 SE 是一門以 C++20 實作、低標點、重視安全性的程式語言。目標是從初學程式一路到型別、模組、測試、JSON、Web、原生互通與 Native Build，都保持簡單。
 
-Current development line / 目前開發版本：
+Current release / 目前版本：
 
 ```text
 Language: SE
 CLI:      se
 Source:   .se
-Version:  SE 0.6.0-dev
+Version:  SE 0.6.0
 ```
 
 ```se
@@ -35,16 +35,48 @@ say player.hp
 
 Full standalone guide / 完整獨立安裝說明：**[docs/installation.md](docs/installation.md)**
 
-### English
+### Quick install — no CMake or C++ compiler needed
 
-Requirements:
+macOS / Linux:
 
-- CMake 3.20+
-- a C++20 compiler
-- Git
-- `curl` if you want to use the SE HTTPS module
+```bash
+curl -fsSL https://raw.githubusercontent.com/funlearnstudio/SE/main/install.sh | sh
+```
 
-Clone and build:
+Windows PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/funlearnstudio/SE/main/install.ps1 | iex
+```
+
+Then verify / 安裝完成後檢查：
+
+```bash
+se --version
+se doctor
+```
+
+The installer downloads the correct prebuilt SE package from GitHub Releases. You do **not** need Git, CMake, or a C++ compiler to use the REPL, `se run`, `se check`, `se check-all`, or `se test`.
+
+安裝器會直接從 GitHub Releases 下載已經編譯完成的 SE。一般使用 REPL、`se run`、`se check`、`se check-all`、`se test` 時，**不需要另外安裝 Git、CMake 或 C++ 編譯器**。
+
+`se build` is the one exception: SE's current native backend emits C++20 and invokes a system C++ compiler, so producing a standalone native executable still requires a C++20 compiler. CMake is not required for normal installed usage.
+
+唯一例外是 `se build`：目前 SE 的 Native Backend 仍會產生 C++20 並呼叫系統 C++ 編譯器，因此如果要把 SE 程式編譯成獨立 Native Executable，仍需要 C++20 編譯器。一般執行 SE 不需要。
+
+### Direct downloads / 直接下載
+
+GitHub Releases publishes these prebuilt archives:
+
+- `se-0.6.0-macos-arm64.tar.gz` — Apple Silicon Mac
+- `se-0.6.0-macos-x64.tar.gz` — Intel Mac
+- `se-0.6.0-linux-x64.tar.gz` — Linux x64
+- `se-0.6.0-windows-x64.zip` — Windows x64
+- `SHA256SUMS.txt` — release checksums
+
+### Build SE from source / 從原始碼編譯 SE
+
+Only contributors who want to build SE itself need CMake, Git and a C++20 compiler:
 
 ```bash
 git clone https://github.com/funlearnstudio/SE.git
@@ -52,101 +84,7 @@ cd SE
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
-```
-
-Install on macOS/Linux:
-
-```bash
 cmake --install build --prefix "$HOME/.local"
-export PATH="$HOME/.local/bin:$PATH"
-se --version
-```
-
-To keep `se` available after restarting your terminal, add this to your shell profile such as `~/.zshrc` or `~/.bashrc`:
-
-```bash
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-Then reload the shell configuration:
-
-```bash
-source ~/.zshrc
-```
-
-On Windows, build with a C++20-capable Visual Studio/MSVC environment:
-
-```powershell
-git clone https://github.com/funlearnstudio/SE.git
-cd SE
-cmake -S . -B build
-cmake --build build --config Release
-ctest --test-dir build -C Release --output-on-failure
-cmake --install build --config Release --prefix "$env:USERPROFILE\.local"
-```
-
-Add the installed `bin` directory to `PATH`, then verify:
-
-```powershell
-se --version
-se doctor
-```
-
-### 中文
-
-需求：
-
-- CMake 3.20 以上
-- 支援 C++20 的編譯器
-- Git
-- 如果要使用 SE 的 HTTPS 模組，需要系統有 `curl`
-
-下載並編譯：
-
-```bash
-git clone https://github.com/funlearnstudio/SE.git
-cd SE
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel
-ctest --test-dir build --output-on-failure
-```
-
-macOS / Linux 安裝：
-
-```bash
-cmake --install build --prefix "$HOME/.local"
-export PATH="$HOME/.local/bin:$PATH"
-se --version
-```
-
-如果希望重新開啟 Terminal 後仍然可以直接使用 `se`，把下面這行加入 `~/.zshrc` 或 `~/.bashrc`：
-
-```bash
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-例如使用 zsh：
-
-```bash
-source ~/.zshrc
-```
-
-Windows 可以在支援 C++20 的 Visual Studio / MSVC 環境中執行：
-
-```powershell
-git clone https://github.com/funlearnstudio/SE.git
-cd SE
-cmake -S . -B build
-cmake --build build --config Release
-ctest --test-dir build -C Release --output-on-failure
-cmake --install build --config Release --prefix "$env:USERPROFILE\.local"
-```
-
-接著把安裝位置的 `bin` 資料夾加入 `PATH`，再檢查：
-
-```powershell
-se --version
-se doctor
 ```
 
 ### First program / 第一個程式
@@ -169,7 +107,7 @@ Check it without running:
 se check hello.se
 ```
 
-Build a native executable:
+If a C++20 compiler is installed, build a native executable:
 
 ```bash
 se build hello.se
@@ -230,6 +168,7 @@ se bind module.sbind generated
 - binding generation through `se bind`
 - interpreter and native C++ backend
 - REPL, check, run, test and native build workflows
+- core conversion aliases: `int`, `integer`, `num`, `double`, `float`, `text`, `string`, `bool`, `boolean`, `char`
 
 ## Documentation
 
