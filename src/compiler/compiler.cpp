@@ -14,7 +14,7 @@ std::string type_refs(const std::vector<ast::TypeRef>&v){std::string r="std::vec
 std::string CppCompiler::expr(const ast::ExprPtr&e) const{
   if(auto x=std::dynamic_pointer_cast<ast::Literal>(e))return std::visit([&](auto v)->std::string{using T=decltype(v);if constexpr(std::is_same_v<T,std::string>)return "std::make_shared<ast::Literal>("+pos(x->pos)+",ast::Literal::Data{"+q(v)+"})";else if constexpr(std::is_same_v<T,bool>)return "std::make_shared<ast::Literal>("+pos(x->pos)+",ast::Literal::Data{"+std::string(v?"true":"false")+"})";else if constexpr(std::is_same_v<T,std::int64_t>)return "std::make_shared<ast::Literal>("+pos(x->pos)+",ast::Literal::Data{std::int64_t{"+std::to_string(v)+"}})";else return "std::make_shared<ast::Literal>("+pos(x->pos)+",ast::Literal::Data{double{"+std::to_string(v)+"}})";},x->value);
   if(auto x=std::dynamic_pointer_cast<ast::Duration>(e))return "std::make_shared<ast::Duration>("+pos(x->pos)+",std::int64_t{"+std::to_string(x->milliseconds)+"})";
-  if(auto x=std::dynamic_pointer_cast<ast::Variable>(e))return "std::make_shared<ast::Variable>("+pos(x->pos)+","+q(x->name)+")";
+  if(auto x=std::dynamic_pointer_cast<ast::Variable>(e))return "std::make_shared<ast::Variable>("+pos(x->pos)+","+q(x->name)+","+type_refs(x->type_args)+")";
   if(auto x=std::dynamic_pointer_cast<ast::Binary>(e))return "std::make_shared<ast::Binary>("+pos(x->pos)+","+expr(x->left)+",TokenKind::"+std::string(token_name(x->op))+","+expr(x->right)+")";
   if(auto x=std::dynamic_pointer_cast<ast::Unary>(e))return "std::make_shared<ast::Unary>("+pos(x->pos)+",TokenKind::"+std::string(token_name(x->op))+","+expr(x->value)+")";
   if(auto x=std::dynamic_pointer_cast<ast::List>(e)){std::string r="std::make_shared<ast::List>("+pos(x->pos)+",std::vector<ast::ExprPtr>{";for(std::size_t i=0;i<x->items.size();++i){if(i)r+=",";r+=expr(x->items[i]);}return r+"})";}
@@ -51,9 +51,9 @@ std::string CppCompiler::stmt(const ast::StmtPtr&s) const{
   if(auto x=std::dynamic_pointer_cast<ast::Try>(s))return "std::make_shared<ast::Try>("+pos(x->pos)+","+block(x->body)+","+q(x->error_name)+","+block(x->else_block)+")";
   if(auto x=std::dynamic_pointer_cast<ast::Fail>(s))return "std::make_shared<ast::Fail>("+pos(x->pos)+","+expr(x->value)+")";
   if(auto x=std::dynamic_pointer_cast<ast::Type>(s)){
-    std::string fields="std::vector<ast::FieldDecl>{";for(std::size_t i=0;i<x->fields.size();++i){if(i)fields+=",";fields+="ast::FieldDecl{"+pos(x->fields[i].pos)+","+q(x->fields[i].name)+","+expr(x->fields[i].value)+"}";}fields+="}";
+    std::string fields="std::vector<ast::FieldDecl>{";for(std::size_t i=0;i<x->fields.size();++i){if(i)fields+=",";fields+="ast::FieldDecl{"+pos(x->fields[i].pos)+","+q(x->fields[i].name)+","+expr(x->fields[i].value)+","+type_ref(x->fields[i].type)+","+(x->fields[i].has_default?"true":"false")+"}";}fields+="}";
     std::string methods="std::vector<std::shared_ptr<ast::Function>>{";for(std::size_t i=0;i<x->methods.size();++i){if(i)methods+=",";methods+=function(x->methods[i]);}methods+="}";
-    return "std::make_shared<ast::Type>("+pos(x->pos)+","+q(x->name)+","+fields+","+methods+")";
+    return "std::make_shared<ast::Type>("+pos(x->pos)+","+q(x->name)+","+fields+","+methods+","+strings(x->generic_params)+")";
   }
   return "ast::StmtPtr{}";
 }
