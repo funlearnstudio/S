@@ -85,6 +85,17 @@ std::shared_ptr<ast::Type> Parser::type_decl(SourcePos start){
   return std::make_shared<ast::Type>(start,name.text,std::move(fields),std::move(methods),std::move(generics));
 }
 
+ast::StmtPtr Parser::if_statement(SourcePos start){
+  auto condition=expression();
+  auto yes=block();
+  ast::Block no;
+  if(match(TokenKind::Else)){
+    if(match(TokenKind::If)) no.push_back(if_statement(peek(-1).pos));
+    else no=block();
+  }
+  return std::make_shared<ast::If>(start,condition,std::move(yes),std::move(no));
+}
+
 ast::StmtPtr Parser::statement(){
   Token start=peek();
   if(match(TokenKind::Say)){ auto e=expression(); line_end(); return std::make_shared<ast::Say>(start.pos,e); }
@@ -115,11 +126,7 @@ ast::StmtPtr Parser::statement(){
     take(TokenKind::Dedent,"This match block was not closed correctly.");
     return std::make_shared<ast::Match>(start.pos,value,std::move(cases),std::move(fallback));
   }
-  if(match(TokenKind::If)){
-    auto c=expression(); auto yes=block(); ast::Block no;
-    if(match(TokenKind::Else)) no=block();
-    return std::make_shared<ast::If>(start.pos,c,std::move(yes),std::move(no));
-  }
+  if(match(TokenKind::If)) return if_statement(start.pos);
   if(match(TokenKind::Try)){
     if(check(TokenKind::Newline)){
       auto body=block(); take(TokenKind::Else,"A try block needs 'else' to handle an error.");
@@ -145,6 +152,17 @@ ast::StmtPtr Parser::statement(){
     auto value=expression(); ast::Block init;
     if(check(TokenKind::Newline)&&peek(1).kind==TokenKind::Indent) init=block(); else line_end();
     return std::make_shared<ast::Assign>(start.pos,left,value,std::move(init));
+  }
+  TokenKind binary=TokenKind::End;
+  if(match(TokenKind::PlusEqual)) binary=TokenKind::Plus;
+  else if(match(TokenKind::MinusEqual)) binary=TokenKind::Minus;
+  else if(match(TokenKind::StarEqual)) binary=TokenKind::Star;
+  else if(match(TokenKind::SlashEqual)) binary=TokenKind::Slash;
+  else if(match(TokenKind::PercentEqual)) binary=TokenKind::Percent;
+  if(binary!=TokenKind::End){
+    auto value=expression(); line_end();
+    auto combined=std::make_shared<ast::Binary>(start.pos,left,binary,value);
+    return std::make_shared<ast::Assign>(start.pos,left,std::move(combined));
   }
   line_end(); return std::make_shared<ast::ExprStmt>(start.pos,left);
 }
