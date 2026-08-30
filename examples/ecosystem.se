@@ -28,9 +28,11 @@ game.text scene "SE Game" 95 180 20 "white"
 
 game.sprite_color scene "player" 40 40 24 24 "#f59e0b"
 game.velocity scene "player" 25 0
-game.key_move scene "player" "ArrowUp" 0 -8
+up = -8
+left = -8
+game.key_move scene "player" "ArrowUp" 0 up
 game.key_move scene "player" "ArrowDown" 0 8
-game.key_move scene "player" "ArrowLeft" -8 0
+game.key_move scene "player" "ArrowLeft" left 0
 game.key_move scene "player" "ArrowRight" 8 0
 game.follow_mouse scene "player"
 game.camera scene 0 0
