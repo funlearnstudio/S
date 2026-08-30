@@ -12,10 +12,17 @@ private:
   std::vector<Token> tokens_; std::size_t at_=0;
   const Token& peek(int offset=0) const;
   bool check(TokenKind) const; bool match(TokenKind); const Token& take(TokenKind,const std::string&);
+  bool identifier(const std::string&) const;
   void line_end(); ast::StmtPtr statement(); ast::Block block();
   ast::StmtPtr if_statement(SourcePos start);
   std::shared_ptr<ast::Function> function(SourcePos start);
   std::shared_ptr<ast::Type> type_decl(SourcePos start);
+  ast::StmtPtr web_section(SourcePos start,const std::string& kind);
+  std::vector<ast::WebElement> web_elements();
+  ast::WebElement web_element();
+  std::vector<ast::WebCssItem> web_css_items();
+  ast::WebCssItem web_css_item();
+  std::string selector_token(const Token&) const;
   ast::TypeRef type_ref();
   ast::ExprPtr expression(int min_prec=0); ast::ExprPtr prefix(); ast::ExprPtr postfix(ast::ExprPtr);
   bool expression_start(TokenKind) const; int precedence(TokenKind) const;
