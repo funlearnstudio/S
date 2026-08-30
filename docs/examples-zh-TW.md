@@ -6,15 +6,15 @@
 
 ## 語言基礎
 
-- `examples/ask.s` — 輸入。
-- `examples/function.s` — 函式。
-- `examples/collections.s` — List / Map / Set 基礎。
-- `examples/errors.s` — Recoverable error。
-- `examples/files.s` — File operation。
+- `examples/ask.se` — 輸入。
+- `examples/function.se` — 函式。
+- `examples/collections.se` — List / Map / Set 基礎。
+- `examples/errors.se` — Recoverable error。
+- `examples/files.se` — File operation。
 - `examples/advanced.se` — 較完整的語言／Runtime 功能。
 - `examples/modern-control.se` — 新一點的 control-flow 範例。
 
-部分舊 example 仍使用 `.s` 作 compatibility；新的 source 應使用 `.se`。
+所有主要 example 都統一使用 `.se`。舊 `.s` 僅保留在相容性測試或 migration path，不再作為正式範例副檔名。
 
 ## Web
 
@@ -38,7 +38,7 @@ se web build examples/browser-api.se dist
 
 - `examples/database-adapters.se` — Database adapter。
 - `examples/ecosystem.se` — Runtime / ecosystem 功能。
-- `examples/game.s` — Game/runtime example。
+- `examples/game.se` — Game/runtime example。
 
 ## 怎麼執行 Example
 
