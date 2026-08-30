@@ -7,7 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_library(s_core
   src/lexer/token.cpp src/lexer/lexer.cpp src/parser/parser.cpp
   src/runtime/error.cpp src/runtime/value.cpp src/runtime/platform_base.cpp src/runtime/advanced.cpp src/modules/modules.cpp src/ffi/ffi.cpp src/ffi/bindgen.cpp
-  src/interpreter/interpreter.cpp src/type/checker.cpp src/compiler/compiler.cpp)
+  src/interpreter/interpreter.cpp src/type/checker.cpp src/compiler/compiler.cpp src/compiler/web_compiler.cpp)
 target_include_directories(s_core PUBLIC include)
 target_compile_definitions(s_core PRIVATE S_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}" S_NATIVE_BUILD_DIR="${CMAKE_CURRENT_BINARY_DIR}")
 target_link_libraries(s_core PUBLIC ${CMAKE_DL_LIBS})
@@ -88,6 +88,7 @@ if(BUILD_TESTING)
   add_test(NAME cli_doctor COMMAND se doctor)
   add_test(NAME cli_check_all COMMAND se check-all ${CMAKE_SOURCE_DIR}/examples/project-tests)
   add_test(NAME cli_project_test COMMAND se test ${CMAKE_SOURCE_DIR}/examples/project-tests)
+  add_test(NAME cli_web_build COMMAND ${CMAKE_COMMAND} -DSE_EXE=$<TARGET_FILE:se> -DSE_ROOT=${CMAKE_SOURCE_DIR} -DSE_WORK=${CMAKE_CURRENT_BINARY_DIR}/web-build -P ${CMAKE_SOURCE_DIR}/tests/web_build.cmake)
 
   if(NOT WIN32)
     set_tests_properties(s_tests PROPERTIES ENVIRONMENT "S_NATIVE_PATH=${CMAKE_CURRENT_BINARY_DIR}")
