@@ -173,7 +173,7 @@
       "patterns": [
         {
           "name": "support.namespace.se",
-          "match": "\\b(?:math|random|os|json|collections|function|option|result|async|db|https|http|web|test|process|path|file|time|js|ts)\\b"
+          "match": "\\b(?:math|random|os|json|collections|function|option|result|async|db|https|http|web|ui|test|process|path|file|time|js|ts)\\b"
         }
       ]
     },
@@ -198,6 +198,10 @@
     },
     "operators": {
       "patterns": [
+        {
+          "name": "keyword.operator.assignment.compound.se",
+          "match": "\\+=|-=|\\*=|/=|%="
+        },
         {
           "name": "keyword.operator.comparison.se",
           "match": "==|!=|<=|>=|<|>"
