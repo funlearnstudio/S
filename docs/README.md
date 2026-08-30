@@ -12,6 +12,7 @@ This is the main English documentation index for SE.
 - [Getting Started](getting-started.md) — install, verify, run the first program and learn the CLI.
 - [Tutorial](tutorial.md) — variables, control flow, functions, collections, types, modules, errors, async, Web and more.
 - [Examples](examples.md) — runnable examples grouped by topic.
+- [Testing and Project Checks](testing.md) — `se check`, `check-all`, `test`, CTest and CI principles.
 
 ## 2. Language reference
 
@@ -35,26 +36,35 @@ This is the main English documentation index for SE.
 
 ## 4. Advanced and systems topics
 
+- [Advanced SE 0.6 Guide](advanced-0.6.md)
 - [Advanced SE 0.6 API](advanced-0.6-api.md)
-- [Generic User Types](generic-user-types-0.7.md)
 - [Native Interoperability](native-interop.md)
 - [Compiler Architecture](compiler-architecture.md)
 - [Runtime Design](runtime-design.md)
 - [Technical Reference](technical-reference.md)
 
-## 5. Stable vs versioned design work
+## 5. Versioned development documents
 
-The stable public release and the repository's versioned design documents are not the same thing.
+These documents describe specific development stages and are kept separate from the stable language reference:
+
+- [SE 0.7 Type System: Structured TypeRef](type-system-0.7.md)
+- [Generic User Types 0.7](generic-user-types-0.7.md)
+- [Database Adapters 0.8](database-adapters-0.8.md)
+- [SE Web Language 0.8](web-language-0.8.md)
+- [Browser API 0.8](browser-api-0.8.md)
+- [Ecosystem Runtime 0.9](ecosystem-runtime-0.9.md)
+- [Depth Roadmap 0.7 → 1.0](depth-roadmap-0.7-1.0.md)
+- [Roadmap](roadmap.md)
+
+A versioned design document is not automatically a promise that every item in it is part of the current stable release.
+
+## 6. Stable vs current source
 
 - **Stable release:** installation and ordinary CLI usage follow the current GitHub Release.
 - **Current source:** `main` may contain newer compiler/Web work while the reported language version still matches the stable line.
-- **Versioned design documents:** files labelled 0.7/0.8/0.9/1.0 describe the stage named in the document; roadmap material is not automatically a stable feature.
-
-See [Roadmap](roadmap.md) for planned work.
+- **Roadmap/design:** future-stage work is labelled separately from released behavior.
 
 ## Documentation rules
-
-To keep the documentation consistent:
 
 1. New user-facing source uses `.se`; legacy `.s` appears only for compatibility/history.
 2. Commands use `se`.
