@@ -15,6 +15,7 @@
 - [語言參考](language-reference-zh-TW.md)
 - [技術參考](technical-reference-zh-TW.md)
 - [型別系統](types-zh-TW.md)
+- [SE 0.7 泛型使用者型別](generic-user-types-0.7-zh-TW.md)
 - [Collections](collections-zh-TW.md)
 - [錯誤處理](errors-zh-TW.md)
 - [模組系統](modules-zh-TW.md)
@@ -34,6 +35,7 @@
 - [SE 0.5 Web 平台](platform-0.5-zh-TW.md)
 - [SE 0.6 進階教學](advanced-0.6-zh-TW.md)
 - [SE 0.6 進階 API](advanced-0.6-api-zh-TW.md)
+- [SE 0.7–1.0 深度路線圖](depth-roadmap-0.7-1.0-zh-TW.md)
 
 ## 開發與維護
 
