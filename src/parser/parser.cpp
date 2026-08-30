@@ -21,6 +21,17 @@ ast::Block Parser::block(){
   return result;
 }
 
+ast::TypeRef Parser::type_ref(){
+  auto name=take(TokenKind::Identifier,"Write a type name here.");
+  std::vector<ast::TypeRef> args;
+  if(match(TokenKind::LeftBracket)){
+    if(check(TokenKind::RightBracket)) throw Error(peek().pos,"A generic type needs at least one type argument.");
+    do { args.push_back(type_ref()); } while(match(TokenKind::Comma));
+    take(TokenKind::RightBracket,"Close type arguments with ']'.");
+  }
+  return ast::TypeRef{name.text,std::move(args)};
+}
+
 std::shared_ptr<ast::Function> Parser::function(SourcePos start){
   auto name=take(TokenKind::Identifier,"Give this function a name.");
   std::vector<std::string> generics;
@@ -30,15 +41,15 @@ std::shared_ptr<ast::Function> Parser::function(SourcePos start){
     take(TokenKind::RightBracket,"Close generic type names with ']'.");
   }
   std::vector<std::string> params;
-  std::vector<std::string> param_types;
+  std::vector<ast::TypeRef> param_types;
   while(check(TokenKind::Identifier)){
     params.push_back(tokens_[at_++].text);
-    std::string type;
-    if(match(TokenKind::Colon)) type=take(TokenKind::Identifier,"Write a type name after ':'.").text;
+    ast::TypeRef type;
+    if(match(TokenKind::Colon)) type=type_ref();
     param_types.push_back(std::move(type));
   }
-  std::string result_type;
-  if(match(TokenKind::Arrow)) result_type=take(TokenKind::Identifier,"Write a return type after '->'.").text;
+  ast::TypeRef result_type;
+  if(match(TokenKind::Arrow)) result_type=type_ref();
   auto b=block();
   return std::make_shared<ast::Function>(start,name.text,std::move(params),std::move(b),std::move(generics),std::move(param_types),std::move(result_type));
 }
