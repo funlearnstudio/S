@@ -12,6 +12,7 @@
 - [快速開始](getting-started-zh-TW.md) — 安裝、確認版本、第一支程式與 CLI。
 - [完整教學](tutorial-zh-TW.md) — 變數、流程控制、函式、集合、型別、模組、錯誤、async、Web 等。
 - [範例索引](examples-zh-TW.md) — 依主題整理可執行範例。
+- [測試與專案檢查](testing-zh-TW.md) — `se check`、`check-all`、`test`、CTest 與 CI 原則。
 
 ## 2. 語言參考
 
@@ -37,21 +38,31 @@
 
 - [SE 0.6 進階功能](advanced-0.6-zh-TW.md)
 - [SE 0.6 API](advanced-0.6-api-zh-TW.md)
-- [Generic User Types](generic-user-types-0.7-zh-TW.md)
 - [Native Interoperability](native-interop-zh-TW.md)
 - [Compiler Architecture](compiler-architecture-zh-TW.md)
 - [Runtime Design](runtime-design-zh-TW.md)
 - [技術參考](technical-reference-zh-TW.md)
 
-## 5. Stable / Current Source / Roadmap
+## 5. Versioned Development Documents
 
-SE 的正式 Release、GitHub `main` 與帶版本號的設計文件不是完全同一件事：
+這些文件描述特定開發階段，和 stable language reference 分開：
+
+- [SE 0.7 Type System：Structured TypeRef](type-system-0.7-zh-TW.md)
+- [Generic User Types 0.7](generic-user-types-0.7-zh-TW.md)
+- [Database Adapters 0.8](database-adapters-0.8-zh-TW.md)
+- [SE Web Language 0.8](web-language-0.8-zh-TW.md)
+- [Browser API 0.8](browser-api-0.8-zh-TW.md)
+- [Ecosystem Runtime 0.9](ecosystem-runtime-0.9-zh-TW.md)
+- [Depth Roadmap 0.7 → 1.0](depth-roadmap-0.7-1.0-zh-TW.md)
+- [Roadmap](roadmap-zh-TW.md)
+
+帶版本號的 design document 不代表其中每個項目都已經進入目前 stable Release。
+
+## 6. Stable / Current Source
 
 - **Stable Release**：一般安裝與 CLI 使用以目前 GitHub Release 為準。
 - **Current Source**：`main` 可能已包含更新的 Compiler / Web 工作，但版本字串仍處於 stable line。
-- **Versioned Design / Roadmap**：0.7 / 0.8 / 0.9 / 1.0 文件描述對應階段；Roadmap 內容不會自動等於目前正式功能。
-
-請看 [Roadmap](roadmap-zh-TW.md) 了解規劃。
+- **Roadmap / Design**：未來階段工作和 released behavior 分開標示。
 
 ## 文件整理規則
 
