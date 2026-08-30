@@ -12,6 +12,7 @@ struct UserTypeInfo;
 struct TypeInfo {
   TypeKind kind=TypeKind::Unknown;
   std::string name;
+  std::vector<TypeInfo> type_args;
   std::shared_ptr<TypeInfo> element,key,value;
   std::shared_ptr<FunctionSig> callable;
   std::shared_ptr<UserTypeInfo> object;
@@ -27,7 +28,13 @@ struct FunctionSig {
   std::size_t min_args=0;
   std::vector<std::string> generic_params;
 };
-struct UserTypeInfo { std::string name; std::unordered_map<std::string,TypeInfo> fields; std::unordered_map<std::string,std::shared_ptr<FunctionSig>> methods; };
+struct UserTypeInfo {
+  std::string name;
+  std::vector<std::string> generic_params;
+  std::vector<std::string> required_fields;
+  std::unordered_map<std::string,TypeInfo> fields;
+  std::unordered_map<std::string,std::shared_ptr<FunctionSig>> methods;
+};
 
 inline TypeInfo::TypeInfo(TypeKind k):kind(k){
   if(k==TypeKind::Error){
@@ -56,6 +63,10 @@ private:
   TypeInfo expr(const ast::ExprPtr&); void stmt(const ast::StmtPtr&); void block(const ast::Block&);
   TypeInfo find(const std::string&,SourcePos) const; void put(const std::string&,TypeInfo,SourcePos);
   void constrain(const ast::ExprPtr&,const TypeInfo&);
+  TypeInfo type_from_ref(const ast::TypeRef&,const std::vector<std::string>&,SourcePos) const;
+  TypeInfo specialize_user_type(const std::shared_ptr<UserTypeInfo>&,const std::vector<TypeInfo>&,SourcePos) const;
+  void configure_signature(const ast::Function&,const std::shared_ptr<FunctionSig>&,const std::vector<std::string>& extra_generics={}) const;
+  void prepare_type(const std::shared_ptr<ast::Type>&);
   void check_project(const ast::Program&); void check_module(const ast::Module&);
   void install_builtins(); TypeInfo builtin_module(const std::string&) const;
   static TypeInfo from_native_name(const std::string&);
