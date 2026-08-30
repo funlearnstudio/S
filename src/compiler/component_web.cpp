@@ -258,27 +258,55 @@ private:
       out_<<expression_js(assign->target,bindings_)<<" = "<<expression_js(assign->value,bindings_)<<";\n";return;
     }
     if(auto branch=std::dynamic_pointer_cast<ast::If>(statement)){
-      indent(depth);out_<<"if("<<expression_js(branch->condition,bindings_)<<"){\n";for(const auto& item:branch->then_block)emit(item,depth+1);indent(depth);out_<<"}";
-      if(!branch->else_block.empty()){out_<<"else{\n";for(const auto& item:branch->else_block)emit(item,depth+1);indent(depth);out_<<"}";}out_<<"\n";return;
+      indent(depth);out_<<"if("<<expression_js(branch->condition,bindings_)<<"){\n";
+      for(const auto& item:branch->then_block){emit(item,depth+1);}
+      indent(depth);out_<<"}";
+      if(!branch->else_block.empty()){
+        out_<<"else{\n";
+        for(const auto& item:branch->else_block){emit(item,depth+1);}
+        indent(depth);out_<<"}";
+      }
+      out_<<"\n";return;
     }
     if(auto repeat=std::dynamic_pointer_cast<ast::Repeat>(statement)){
-      auto name="__seRepeat"+std::to_string(locals_.size());indent(depth);out_<<"for(let "<<name<<"=0;"<<name<<"<"<<expression_js(repeat->count,bindings_)<<";"<<name<<"+=1){\n";for(const auto& item:repeat->body)emit(item,depth+1);indent(depth);out_<<"}\n";return;
+      auto name="__seRepeat"+std::to_string(locals_.size());indent(depth);out_<<"for(let "<<name<<"=0;"<<name<<"<"<<expression_js(repeat->count,bindings_)<<";"<<name<<"+=1){\n";
+      for(const auto& item:repeat->body){emit(item,depth+1);}
+      indent(depth);out_<<"}\n";return;
     }
-    if(auto loop=std::dynamic_pointer_cast<ast::While>(statement)){indent(depth);out_<<"while("<<expression_js(loop->condition,bindings_)<<"){\n";for(const auto& item:loop->body)emit(item,depth+1);indent(depth);out_<<"}\n";return;}
+    if(auto loop=std::dynamic_pointer_cast<ast::While>(statement)){
+      indent(depth);out_<<"while("<<expression_js(loop->condition,bindings_)<<"){\n";
+      for(const auto& item:loop->body){emit(item,depth+1);}
+      indent(depth);out_<<"}\n";return;
+    }
     if(auto loop=std::dynamic_pointer_cast<ast::For>(statement)){
       indent(depth);
       if(loop->names.size()==1)out_<<"for(const "<<loop->names[0]<<" of "<<expression_js(loop->values,bindings_)<<"){\n";
       else if(loop->names.size()==2)out_<<"for(const ["<<loop->names[0]<<","<<loop->names[1]<<"] of Object.entries("<<expression_js(loop->values,bindings_)<<")){\n";
       else throw Error(loop->pos,"Browser for loops support one value or key/value names.");
-      for(const auto& item:loop->body)emit(item,depth+1);indent(depth);out_<<"}\n";return;
+      for(const auto& item:loop->body){emit(item,depth+1);}
+      indent(depth);out_<<"}\n";return;
     }
     if(auto attempt=std::dynamic_pointer_cast<ast::Try>(statement)){
-      indent(depth);out_<<"try{\n";for(const auto& item:attempt->body)emit(item,depth+1);indent(depth);out_<<"}catch("<<attempt->error_name<<"){\n";for(const auto& item:attempt->else_block)emit(item,depth+1);indent(depth);out_<<"}\n";return;
+      indent(depth);out_<<"try{\n";
+      for(const auto& item:attempt->body){emit(item,depth+1);}
+      indent(depth);out_<<"}catch("<<attempt->error_name<<"){\n";
+      for(const auto& item:attempt->else_block){emit(item,depth+1);}
+      indent(depth);out_<<"}\n";return;
     }
     if(auto match=std::dynamic_pointer_cast<ast::Match>(statement)){
       auto name="__seMatch"+std::to_string(locals_.size());indent(depth);out_<<"const "<<name<<" = "<<expression_js(match->value,bindings_)<<";\n";
-      for(std::size_t i=0;i<match->cases.size();++i){indent(depth);out_<<(i?"else if(":"if(")<<name<<" === "<<expression_js(match->cases[i].pattern,bindings_)<<"){\n";for(const auto& item:match->cases[i].body)emit(item,depth+1);indent(depth);out_<<"}";if(i+1==match->cases.size()&&match->else_block.empty())out_<<"\n";}
-      if(!match->else_block.empty()){out_<<"else{\n";for(const auto& item:match->else_block)emit(item,depth+1);indent(depth);out_<<"}\n";}return;
+      for(std::size_t i=0;i<match->cases.size();++i){
+        indent(depth);out_<<(i?"else if(":"if(")<<name<<" === "<<expression_js(match->cases[i].pattern,bindings_)<<"){\n";
+        for(const auto& item:match->cases[i].body){emit(item,depth+1);}
+        indent(depth);out_<<"}";
+        if(i+1==match->cases.size()&&match->else_block.empty())out_<<"\n";
+      }
+      if(!match->else_block.empty()){
+        out_<<"else{\n";
+        for(const auto& item:match->else_block){emit(item,depth+1);}
+        indent(depth);out_<<"}\n";
+      }
+      return;
     }
     if(auto give=std::dynamic_pointer_cast<ast::Give>(statement)){indent(depth);out_<<"return "<<expression_js(give->value,bindings_)<<";\n";return;}
     if(auto fail=std::dynamic_pointer_cast<ast::Fail>(statement)){indent(depth);out_<<"throw new Error(String("<<expression_js(fail->value,bindings_)<<"));\n";return;}
