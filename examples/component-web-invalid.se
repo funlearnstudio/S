@@ -1,0 +1,6 @@
+make Button text
+    html
+        button text
+
+page "/"
+    Button
