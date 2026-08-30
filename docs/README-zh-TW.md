@@ -2,7 +2,7 @@
 
 這是 SE 的繁體中文主要文件入口。
 
-> 第一次學 SE，建議依序閱讀：**快速開始 → 完整教學 → 技術參考**。
+> 第一次學 SE，建議依序閱讀：**快速開始 → 完整教學 → 語言參考**。想了解 Compiler / Runtime 再讀 **技術參考**。
 
 [English documentation](README.md)
 
@@ -11,12 +11,12 @@
 - [安裝](installation.md) — 預編譯安裝器、原始碼編譯、PATH 與平台注意事項。
 - [快速開始](getting-started-zh-TW.md) — 安裝、確認版本、第一支程式與 CLI。
 - [完整教學](tutorial-zh-TW.md) — 變數、流程控制、函式、集合、型別、模組、錯誤、async、Web 等。
-- [範例](examples-zh-TW.md) — 小型可執行範例。
+- [範例索引](examples-zh-TW.md) — 依主題整理可執行範例。
 
 ## 2. 語言參考
 
 - [語言參考](language-reference-zh-TW.md)
-- [語法參考](syntax-reference-zh-TW.md)
+- [語法速查](syntax-reference-zh-TW.md)
 - [型別與方法](types-zh-TW.md)
 - [型別轉換](conversions-zh-TW.md)
 - [Collections](collections-zh-TW.md)
@@ -28,10 +28,10 @@
 
 ## 3. Web 開發
 
-- [SE Web Language](web-language-0.8-zh-TW.md) — Component、HTML/CSS/JS、page 與輸出檔案。
-- [Browser API](browser-api-0.8-zh-TW.md) — HTTP、JSON、表單、頁面導航、取消請求與 DOM helper。
+- [SE Web Language](web-language-0.8-zh-TW.md) — Component、HTML/CSS/JS、page 與 generated output。
+- [Browser API](browser-api-0.8-zh-TW.md) — HTTP、JSON、Form、routing、cancellation 與 DOM helper。
 - [Web 範例](../examples/component-web.se)
-- [Browser API 完整範例](../examples/browser-api.se)
+- [Browser API 範例](../examples/browser-api.se)
 
 ## 4. 進階與底層技術
 
@@ -43,18 +43,21 @@
 - [Runtime Design](runtime-design-zh-TW.md)
 - [技術參考](technical-reference-zh-TW.md)
 
-## 5. 專案狀態與 Roadmap
+## 5. Stable / Current Source / Roadmap
 
-- [Roadmap](roadmap-zh-TW.md)
-- 帶版本號的設計文件描述的是該版本／階段的功能。看到 0.7、0.8、0.9 或 1.0 規劃時，不應自動視為目前正式 Release 已全部提供。
+SE 的正式 Release、GitHub `main` 與帶版本號的設計文件不是完全同一件事：
+
+- **Stable Release**：一般安裝與 CLI 使用以目前 GitHub Release 為準。
+- **Current Source**：`main` 可能已包含更新的 Compiler / Web 工作，但版本字串仍處於 stable line。
+- **Versioned Design / Roadmap**：0.7 / 0.8 / 0.9 / 1.0 文件描述對應階段；Roadmap 內容不會自動等於目前正式功能。
+
+請看 [Roadmap](roadmap-zh-TW.md) 了解規劃。
 
 ## 文件整理規則
 
-為了避免文件再次變亂，主要文件遵守以下規則：
-
-1. 新的使用者程式一律使用 `.se`，舊 `.s` 只作相容說明。
+1. 新使用者 source 一律使用 `.se`；`.s` 只出現在 compatibility/history。
 2. CLI 一律寫 `se`。
-3. 正式 Release 與未來 Roadmap 分開說明。
-4. 教學範例應對應實際 implementation，不把尚未完成的語法寫成已完成。
-5. 英文與繁體中文的主要教學保持相同章節結構與術語。
-6. 同一主題只保留一份主要入口；深入細節再連到專門 Reference。
+3. Stable behavior、current-source addition、roadmap/design work 要明確分開。
+4. Example 應對應它所在 revision 的實際 implementation。
+5. 英文與繁中主要文件保持相同章節結構與術語。
+6. 同一主題只保留一份 canonical guide/reference；舊入口改成導向，不再複製整篇內容。
