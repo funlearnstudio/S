@@ -1,33 +1,12 @@
-# SE 教學（繁體中文）
+# SE 完整教學
 
-SE 的目標是讓程式從入門到進階都維持簡單、低標點、可讀，而且把複雜度留在 compiler/runtime 裡。SE 0.3 的主要原始碼副檔名是 `.se`，命令列工具是 `se`。
+[English version](tutorial.md)
 
-## 1. 安裝與確認
+SE 的核心原則是 **Simple at every level.**：使用縮排、低標點函式呼叫、型別推斷、安全的 runtime 操作，並盡量讓直譯、Native 與 Web 開發共用熟悉的語言模型。
 
-從原始碼安裝需要 CMake 3.20+ 與 C++20 compiler。
+這份教學專注在「怎麼寫 SE」。如果要了解 compiler 內部，請看 [技術參考](technical-reference-zh-TW.md)。
 
-```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel
-cmake --install build --prefix "$HOME/.local"
-```
-
-macOS/Linux 若 `se` 找不到，確認 PATH：
-
-```bash
-export PATH="$HOME/.local/bin:$PATH"
-se --version
-```
-
-正常應顯示：
-
-```text
-SE 0.3.0
-```
-
-## 2. 第一個程式
-
-建立 `hello.se`：
+## 1. Hello SE
 
 ```se
 say "Hello SE"
@@ -39,22 +18,15 @@ say "Hello SE"
 se run hello.se
 ```
 
-只檢查語法與型別：
+只檢查、不執行：
 
 ```bash
 se check hello.se
 ```
 
-編譯為 native executable：
+## 2. 變數與值
 
-```bash
-se build hello.se
-./hello
-```
-
-## 3. 變數與基本值
-
-SE 會從值推斷型別：
+SE 會從值推斷常見型別：
 
 ```se
 name = "Steve"
@@ -63,18 +35,18 @@ score = 98.5
 ready = true
 ```
 
-常用內建值類型包括 `Int`、`Num`、`Bool`、`Text`、`Bytes`、collections，以及使用者自訂 type。
+常見 runtime value family 包含 `None`、`Int`、`Num`、`Bool`、`Text`、`Bytes`、`List`、`Map`、`Set`、Function、Object、Error、Duration、Path/File 與 managed native handle。
 
-## 4. 輸入與輸出
+## 3. 輸入與輸出
 
 ```se
-name = ask "What is your name?"
+name = ask "Your name?"
 say "Hello " + name
 ```
 
-`ask` 取得輸入，`say` 輸出值。
+`say` 輸出值；`ask` 顯示提示並取得文字輸入。
 
-## 5. 數學、比較與邏輯
+## 4. 數學、比較與邏輯
 
 ```se
 a = 10
@@ -90,24 +62,26 @@ say a ** 2
 say a > b
 say a == b
 say a != b
+say ready and a > b
+say not ready
 ```
 
-SE 支援 `and`、`or`、`not`，並使用一般 expression precedence。
-
-## 6. if / else
-
-SE 用縮排形成 block，不使用 `{}`：
+## 5. 條件判斷
 
 ```se
-age = 15
+score = 85
 
-if age >= 15
-    say "yes"
+if score >= 90
+    say "A"
+else if score >= 80
+    say "B"
 else
-    say "no"
+    say "C"
 ```
 
-## 7. 迴圈
+SE 使用縮排形成 block，不使用 `{}`。較新的 source branch 也可能提供 `elif` alias；請以你實際 build 的 revision 為準。
+
+## 6. 迴圈
 
 固定次數：
 
@@ -116,7 +90,7 @@ repeat 3
     say "Hi"
 ```
 
-遍歷資料：
+遍歷 collection：
 
 ```se
 nums = [1, 2, 3]
@@ -129,10 +103,9 @@ for n in nums
 
 ```se
 n = 0
-
 while n < 3
     say n
-    n = n + 1
+    n += 1
 ```
 
 Range：
@@ -142,7 +115,7 @@ for n in 1..10
     say n
 ```
 
-## 8. 函式
+## 7. 函式
 
 函式使用 `make`，回傳使用 `give`：
 
@@ -154,25 +127,35 @@ answer = add 5 3
 say answer
 ```
 
-SE 的呼叫語法刻意減少不必要括號。
+SE 刻意減少函式呼叫時不必要的括號。
 
-## 9. List、Map、Set
+函式也可以成為值與 closure：
+
+```se
+make make_adder base
+    make inner value
+        give base + value
+    give inner
+
+add10 = make_adder 10
+say add10 5
+```
+
+## 8. List、Map、Set
 
 List：
 
 ```se
 nums = [1, 2, 3]
 nums.add 4
-nums.remove 2
 say nums.len
+say nums[0]
 ```
-
-SE 會在 runtime 檢查 List index，避免越界造成 undefined behavior。
 
 Map：
 
 ```se
-user = ["name": "Steve", "age": "15"]
+user = ["name": "Steve", "role": "student"]
 say user["name"]
 
 for key value in user
@@ -190,9 +173,9 @@ if 3 in values
     say "found"
 ```
 
-## 10. Text 與 Bytes
+SE 會檢查不合法的 collection 操作，而不是把 C++ undefined behavior 暴露給一般 SE 程式。
 
-Text 常用 member：
+## 9. Text 與 Bytes
 
 ```se
 text = "Hello"
@@ -201,16 +184,16 @@ say text.upper
 say text.lower
 ```
 
-Bytes：
+Binary-safe 資料使用 `Bytes`：
 
 ```se
 data = bytes "hello"
 say data.len
 ```
 
-Bytes 是 binary-safe 的 byte buffer，可用於 native interoperability。
+Text 與 Bytes 分開，讓 binary API 不必把任意 bytes 假裝成文字。
 
-## 11. 自訂 Type 與 Method
+## 10. 自訂 Type 與 Method
 
 ```se
 type Player
@@ -227,14 +210,12 @@ player = Player
     name = "Steve"
 
 player.hit 20
-say player.name
 say player.hp
-say player.alive
 ```
 
-Field 型別由預設值推斷。Method 內可直接使用 field 名稱，不必強制寫 `self`。
+Method 可以直接存取 field；一般 SE 程式不必每次都強制寫 `self.`。
 
-## 12. Modules
+## 11. Modules
 
 `player.se`：
 
@@ -252,28 +233,21 @@ p = Player
 say p.hp
 ```
 
-SE 0.3 會優先搜尋 `.se` module；為遷移相容，也可搜尋舊 `.s`。以下底線開頭的 top-level 名稱視為 module-private：
+新程式使用 `.se`。Top-level 名稱以 `_` 開頭時遵循 module-private convention。Circular import 會被拒絕。
 
-```se
-_secret = 123
-```
+## 12. 錯誤處理
 
-Circular imports 會被拒絕並顯示 dependency chain。
-
-## 13. 錯誤處理
-
-可恢復錯誤：
+處理可恢復錯誤：
 
 ```se
 try
-    text = read "hello.txt"
+    text = read "data.txt"
     say text
 else err
-    say err.kind
     say err.message
 ```
 
-建立自己的錯誤：
+建立錯誤：
 
 ```se
 make check score
@@ -282,95 +256,186 @@ make check score
     give score
 ```
 
-函式內可以使用 `try expr` 把 recoverable error 往呼叫端傳遞：
+傳遞 recoverable error：
 
 ```se
 make load
-    give try read "hello.txt"
+    give try read "data.txt"
 ```
 
-## 14. Files、Path、Time
+## 13. Pattern Matching
+
+SE 提供 value-based `match` / `case`：
+
+```se
+match status
+    case 200
+        say "ok"
+    case 404
+        say "not found"
+    else
+        say "other"
+```
+
+目前是值／相等比較型 matching，不是完整 destructuring pattern system。
+
+## 14. Option 與 Result
+
+進階 SE 提供 Option / Result helper，用來表示「可能沒有值」或「成功／失敗」的資料層結果。當你希望錯誤狀態本身是值，而不是控制流程 error 時，可以使用它們。
+
+API 範例請看 [SE 0.6 進階功能](advanced-0.6-zh-TW.md)。
+
+## 15. Async Task
+
+```se
+job = async.run slow_work 21
+answer = async.await job
+say answer
+```
+
+Task 是 managed runtime task；不要把它理解成任意 SE VM 程式都能無限制平行執行。
+
+## 16. File、Path、Time
 
 File：
 
 ```se
-try
-    write "hello.txt" "Hello"
-    append "hello.txt" " SE"
-    text = read "hello.txt"
-    say text
-else err
-    say err
+write "hello.txt" "Hello"
+append "hello.txt" " SE"
+text = read "hello.txt"
+say text
 ```
 
 Path：
 
 ```se
 use path
-
 file = path.join "data" "user.txt"
-say path.name file
-say path.ext file
 say path.exists file
 ```
 
-Time：
+Time / Duration：
 
 ```se
 use time
-
 say time.now
 wait 500ms
 wait 2s
-wait 1min
 ```
 
-## 15. REPL
+## 17. JSON 與 HTTP
 
-直接執行：
+JSON object 會對應 Map、array 對應 List、string 對應 Text、數字對應數值型別、boolean 對應 Bool、null 對應 None。
+
+Backend HTTP：
+
+```se
+use http
+body = http.get "http://example.com/"
+say body
+```
+
+HTTPS 也可使用；目前 TLS transport 會委派給系統 `curl`。
+
+## 18. 測試
+
+測試檔慣例使用 `*_test.se`：
+
+```se
+use test
+
+test.equal 4 2 + 2
+test.ok true
+```
+
+執行專案測試：
 
 ```bash
-se
+se test .
 ```
 
-然後：
+## 19. SE Web
 
-```text
-> say "Hello"
-Hello
+Web component 直接沿用 `make`：
+
+```se
+make Button text
+    html
+        button text
+
+    css
+        padding 12
+        border_radius 8
+
+    js
+        when click
+            say text
+
+page "/"
+    Button "Save"
 ```
 
-縮排 block 在 REPL 中以空白行完成。
+建置：
 
-## 16. Native interoperability
+```bash
+se web build app.se dist
+```
 
-一般 SE 程式仍然只需要：
+輸出是標準 HTML、CSS、JavaScript/TypeScript。完整說明請看 [SE Web Language](web-language-0.8-zh-TW.md)。
+
+## 20. Browser API 與多頁面
+
+SE Web 可以直接做 browser-side request 與頁面導航：
+
+```se
+make LoadUsers
+    html
+        button "Load"
+
+    js
+        when click
+            try
+                options = ["timeout": 8000, "retries": 2]
+                task = browser.get_json "/api/users" options
+                result = async.await task
+                say result.data
+            else err
+                say err.message
+
+page "/"
+    LoadUsers
+
+page "/about"
+    About
+```
+
+使用 `browser.go` 切換頁面、`browser.post_json` 傳 JSON、`browser.cancel` 取消有 key 的 request。詳細 API 請看 [Browser API](browser-api-0.8-zh-TW.md)。
+
+## 21. Native Interoperability
+
+Native library 透過 C ABI 描述，而不是直接把任意 C++ ABI 暴露給 SE。一般 SE 程式仍然正常 import：
 
 ```se
 use native_test
 say add 20 22
 ```
 
-`.snative` 描述 native C ABI：
+Native bridge 支援 scalar、Text、Bytes 與 managed opaque handle。詳細內容請看 [Native Interoperability](native-interop-zh-TW.md)。
+
+## 22. Interpreter、Native、Web 工作流程
 
 ```text
-library native_test
-add s_test_add Int Int -> Int
-bytes_len s_test_bytes_len Bytes -> Int
+se check app.se          靜態檢查
+se run app.se            Interpreter
+se build app.se          C++20 Native Backend
+se web build app.se dist Web Compiler
 ```
 
-SE 的 native bridge 支援 `Int`、`Num`、`Bool`、`Text`、`Bytes`、`None` 與 opaque managed handles。Native resource 可以指定 cleanup function，由 runtime 管理生命週期。
+SE 的目標不是讓不同 target 變成不同語言，而是讓你換執行方式時仍保留熟悉的語法與概念。
 
-Binding generator：
+## 下一步
 
-```bash
-se bind mathx.sbind generated
-```
-
-會產生 `.snative`、C header 與 C++ wrapper。
-
-## 17. 建議學習順序
-
-第一次學 SE 時，可以照這個順序：輸出與變數 → `if` → loop → function → List/Map/Set → type/method → module → error → file/path/time → native interoperability。
-
-SE 的設計原則不是把功能拿掉，而是讓功能存在時仍保持少樣板、低標點與可理解的行為。
+- [語言參考](language-reference-zh-TW.md)：查精確語言規則。
+- [技術參考](technical-reference-zh-TW.md)：了解 compiler/runtime。
+- [SE Web Language](web-language-0.8-zh-TW.md)：學 Web component。
+- [Browser API](browser-api-0.8-zh-TW.md)：學 API、表單與 routing。
