@@ -1,7 +1,7 @@
 {
   "name": "se-language",
   "displayName": "SE Language",
-  "description": "Official language support, syntax highlighting, snippets, and run/check/build commands for SE (.se)",
+  "description": "Official SE language support with syntax highlighting, IntelliSense, symbols, navigation, snippets, and run/check/build commands for .se files",
   "version": "0.6.0",
   "publisher": "funlearnstudio",
   "license": "MIT",
@@ -13,7 +13,7 @@
   "bugs": {
     "url": "https://github.com/funlearnstudio/SE/issues"
   },
-  "keywords": ["se", "programming language", "syntax highlighting"],
+  "keywords": ["se", "programming language", "syntax highlighting", "intellisense", "autocomplete"],
   "engines": { "vscode": "^1.85.0" },
   "categories": ["Programming Languages"],
   "activationEvents": ["onLanguage:se", "onCommand:se.run", "onCommand:se.check", "onCommand:se.build"],
