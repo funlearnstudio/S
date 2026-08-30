@@ -1,0 +1,7 @@
+type Pair[A, B]
+    first:A
+    second:B
+
+pair = Pair[Int]
+    first = 1
+    second = 2
