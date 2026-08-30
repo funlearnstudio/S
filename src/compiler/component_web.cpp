@@ -319,7 +319,13 @@ Bindings bind_component(const Component& component,const std::shared_ptr<ast::Ca
   Bindings bindings;for(std::size_t i=0;i<call->args.size();++i)bindings[component.function->params[i]]=call->args[i];return bindings;
 }
 
-std::shared_ptr<ast::Call> component_call(const ast::StmtPtr& statement){auto expression=std::dynamic_pointer_cast<ast::ExprStmt>(statement);return expression?std::dynamic_pointer_cast<ast::Call>(expression->value):nullptr;}
+std::shared_ptr<ast::Call> component_call(const ast::StmtPtr& statement){
+  auto expression=std::dynamic_pointer_cast<ast::ExprStmt>(statement);
+  if(!expression)return nullptr;
+  if(auto call=std::dynamic_pointer_cast<ast::Call>(expression->value))return call;
+  if(auto variable=std::dynamic_pointer_cast<ast::Variable>(expression->value))return std::make_shared<ast::Call>(variable->pos,variable,std::vector<ast::ExprPtr>{});
+  return nullptr;
+}
 std::string component_name(const std::shared_ptr<ast::Call>& call){if(!call)return {};auto variable=std::dynamic_pointer_cast<ast::Variable>(call->callee);return variable?variable->name:std::string{};}
 
 std::string browser_runtime(){
