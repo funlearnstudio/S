@@ -99,6 +99,7 @@ if(BUILD_TESTING)
     add_test(NAME bindgen COMMAND ${CMAKE_COMMAND} -DS_EXE=$<TARGET_FILE:se> -DS_ROOT=${CMAKE_SOURCE_DIR} -DS_WORK=${CMAKE_CURRENT_BINARY_DIR}/bindgen -DS_CC=${CMAKE_C_COMPILER} -DS_CXX=${CMAKE_CXX_COMPILER} -P ${CMAKE_SOURCE_DIR}/tests/bindgen.cmake)
     add_test(NAME advanced_native COMMAND ${CMAKE_COMMAND} -DSE_EXE=$<TARGET_FILE:se> -DSE_ROOT=${CMAKE_SOURCE_DIR} -DSE_WORK=${CMAKE_CURRENT_BINARY_DIR}/advanced-native -P ${CMAKE_SOURCE_DIR}/tests/advanced_native.cmake)
     add_test(NAME type_depth_native COMMAND ${CMAKE_COMMAND} -DSE_EXE=$<TARGET_FILE:se> -DSE_ROOT=${CMAKE_SOURCE_DIR} -DSE_WORK=${CMAKE_CURRENT_BINARY_DIR}/type-depth-native -P ${CMAKE_SOURCE_DIR}/tests/type_depth_native.cmake)
+    add_test(NAME generic_user_types_native COMMAND ${CMAKE_COMMAND} -DSE_EXE=$<TARGET_FILE:se> -DSE_ROOT=${CMAKE_SOURCE_DIR} -DSE_WORK=${CMAKE_CURRENT_BINARY_DIR}/generic-user-types-native -P ${CMAKE_SOURCE_DIR}/tests/generic_user_types_native.cmake)
   endif()
 endif()
 
