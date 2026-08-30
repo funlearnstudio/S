@@ -1,18 +1,21 @@
 # SE 語言參考
 
-本文件是 `language-reference.md` 的繁體中文版，快速列出目前語法與核心語意。
+[English version](language-reference.md)
 
-## 原始碼
+這份 Reference 快速整理目前的使用者-facing 語言模型。想看完整教學請讀 [SE 完整教學](tutorial-zh-TW.md)；想了解 compiler 內部請讀 [技術參考](technical-reference-zh-TW.md)。
 
-新檔案使用 `.se`。舊 `.s` 暫時保留相容性。
+## Source 與註解
 
-## 註解
+新的 source file 使用 `.se`：
 
 ```se
-# comment
+# 註解
+say "Hello"
 ```
 
-## Literal
+舊 `.s` 只保留 migration compatibility。
+
+## Literals
 
 ```se
 123
@@ -22,11 +25,27 @@ false
 "text"
 [1, 2, 3]
 ["name": "SE"]
+set [1, 2, 3]
+500ms
+2s
+1min
 ```
 
-Duration 支援 `ms`、`s`、`min`。
+## 變數與 Assignment
 
-## 運算
+```se
+name = "SE"
+count = 1
+count += 1
+count -= 1
+count *= 2
+count /= 2
+count %= 3
+```
+
+Compound assignment 會沿用一般 assignment + binary operation 的語意。
+
+## Operators
 
 算術：`+ - * / % **`
 
@@ -34,96 +53,193 @@ Duration 支援 `ms`、`s`、`min`。
 
 邏輯：`and or not`
 
+Membership：`in`
+
 Range：`1..10`
 
-## 控制流程
+大致 precedence 由高到低：
+
+```text
+**
+unary - / not
+* / %
++ -
+..
+comparison
+== !=
+and
+or
+```
+
+`**` 是 right-associative。
+
+## 條件判斷
 
 ```se
-if condition
-    ...
+if score >= 90
+    say "A"
+else if score >= 80
+    say "B"
 else
-    ...
+    say "C"
+```
 
-repeat count
-    ...
+較新的 source revision 也可能支援 `elif` 作為 `else if` alias；請以你實際 build 的 revision 為準。
 
-for item in values
-    ...
+## 迴圈
 
-while condition
-    ...
+```se
+repeat 3
+    say "Hi"
+
+for item in items
+    say item
+
+for key value in map_value
+    say key
+    say value
+
+while running
+    update
 ```
 
 ## 函式
 
 ```se
-make name a b
-    give value
+make add a b
+    give a + b
+
+answer = add 2 3
 ```
 
-呼叫通常不需要括號：
+SE 採低標點呼叫。需要明確 grouping 時可使用括號。
 
-```se
-result = add 2 3
-```
-
-必要時可用括號解除低標點呼叫歧義。
-
-## 型別
-
-```se
-type User
-    name = ""
-
-    make hello
-        say name
-```
-
-## 模組
-
-```se
-use module
-```
-
-以下劃線開頭 `_name` 表示 module private convention。
-
-## 錯誤
-
-```se
-try
-    ...
-else err
-    ...
-
-fail "message"
-```
-
-## 泛型函式
+## 型別標註與 Generic Function
 
 ```se
 make identity[T] value:T -> T
     give value
 ```
 
-## Pattern matching
+能推斷時不必強制寫 annotation。
+
+## User-defined Type
 
 ```se
-match value
-    case 1
-        ...
-    else
-        ...
+type User
+    name = ""
+    score = 0
+
+    make hello
+        say name
+
+user = User
+    name = "SE"
 ```
 
-目前是 value pattern。
+每個 object 都有自己的 field storage。Method 內未被 local shadow 的 field 可以解析成 current object field，不需要強制到處寫 `self.`。
 
-## Member / index
+## Collections
+
+```se
+list = [1, 2, 3]
+map_value = ["name": "SE"]
+set_value = set [1, 2, 2, 3]
+
+list.add 4
+say map_value["name"]
+
+if 3 in set_value
+    say "found"
+```
+
+## Member 與 Index
 
 ```se
 value.member
 list[index]
-map["key"]
+map_value["key"]
 value.help
 ```
 
-`.help` 可用來查看值可用的成員與基本說明。
+支援的 value 可透過 `.help` 查看基本 member/help 資訊。
+
+## Modules
+
+```se
+use path
+```
+
+Top-level 名稱以 `_` 開頭時遵循 module-private convention。Circular import 會被拒絕。
+
+## 錯誤處理
+
+```se
+try
+    text = read "data.txt"
+    say text
+else err
+    say err.message
+```
+
+建立 runtime error：
+
+```se
+fail "message"
+```
+
+在支援的位置傳遞 fallible expression：
+
+```se
+make load
+    give try read "data.txt"
+```
+
+## Match / Case
+
+```se
+match status
+    case 200
+        say "ok"
+    case 404
+        say "not found"
+    else
+        say "other"
+```
+
+目前 matching 以 value/equality 為主，不是完整 destructuring pattern system。
+
+## Async
+
+```se
+job = async.run work 21
+answer = async.await job
+```
+
+SE Web 對支援的 browser event `async.await` 也會降低成 JavaScript `await`。
+
+## Web Source
+
+```se
+make Button text
+    html
+        button text
+
+    css
+        padding 12
+
+    js
+        when click
+            say text
+
+page "/"
+    Button "Save"
+```
+
+建置：
+
+```bash
+se web build app.se dist
+```
+
+Browser request、routing 與表單請看 [Browser API](browser-api-0.8-zh-TW.md)。

@@ -1,10 +1,10 @@
-# 時間與 Duration
+# SE 時間與 Duration
 
-本文件是 `time.md` 的繁體中文版。
+[English version](time.md)
 
-SE 提供 Duration literal 與 `time` module。
+SE 提供 Duration literal 與 `time` module，處理簡單的 runtime timing 工作。
 
-## Duration
+## Duration Literal
 
 ```se
 wait 500ms
@@ -12,15 +12,9 @@ wait 2s
 wait 1min
 ```
 
-支援單位：
+目前常用單位包含毫秒 `ms`、秒 `s`、分鐘 `min`。`wait` 不接受負 Duration。
 
-- `ms`：毫秒
-- `s`：秒
-- `min`：分鐘
-
-`wait` 不接受負 Duration。
-
-## time.now
+## Current Time
 
 ```se
 use time
@@ -29,8 +23,12 @@ now = time.now
 say now
 ```
 
-`time.now` 回傳 Runtime 的 Time value。
+`time.now` 回傳目前 implementation 提供的 Runtime Time value。
 
-## 用途
+## Runtime Model
 
-Duration 適合重試間隔、簡單動畫/輪詢、CLI 等待與教學程式。更完整的日期格式化、時區與 calendar API 尚不是目前 SE time module 的完整能力範圍。
+底層實作使用 C++ chrono-based timing；一般 SE code 使用 SE 自己的 Duration / Time value，不需要接觸 C++ chrono type。
+
+## 目前能力範圍
+
+目前 time API 刻意維持精簡，適合等待、retry delay、教學程式與輕量 timing。除非後續版本文件明確加入，否則不應把它描述成完整 calendar / timezone / date-formatting framework。

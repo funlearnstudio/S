@@ -1,19 +1,20 @@
-# Collections 集合系統
+# SE Collections
 
-本文件是 `collections.md` 的繁體中文版。
+[English version](collections.md)
 
-SE 內建 List、Map、Set，並由 Runtime 做基本安全檢查。
+SE 提供 managed `List`、`Map`、`Set`。Collection operation 由 runtime 做安全檢查，不把 C++ iterator 或 raw memory 暴露給一般 SE code。
 
 ## List
 
 ```se
 nums = [1, 2, 3]
 nums.add 4
+nums.remove 2
 say nums.len
 say nums[0]
 ```
 
-索引超出範圍時會產生錯誤，不會靜默讀取未知記憶體。
+Index 超出範圍時會產生 SE error，而不是去讀未知記憶體。
 
 ## Map
 
@@ -22,26 +23,30 @@ user = ["name": "SE", "score": 100]
 say user["name"]
 ```
 
-Map 適合儲存 key/value 資料，也可搭配 JSON 與 `collections.sort_by`。
+Map 很適合搭配 JSON-style data。
+
+遍歷 key/value：
+
+```se
+for key value in user
+    say key
+    say value
+```
 
 ## Set
 
 ```se
 values = set [1, 2, 2, 3]
+values.add 4
+values.remove 2
+
+if 3 in values
+    say "found"
 ```
 
-Set 用於保存不重複元素。
+Set 只保留 unique value。
 
-## 迭代
-
-```se
-for n in nums
-    say n
-```
-
-## 高階集合操作
-
-SE 0.6 加入：
+## Higher-order Collection Helpers
 
 ```se
 use collections
@@ -62,4 +67,8 @@ desc = collections.sort_by_desc users "score"
 ordered2 = collections.sort_with nums before
 ```
 
-這些高階操作原則上回傳新 List，不直接修改原集合。
+這些 helper 原則上回傳新的 List，不透過 C++ container internals 暴露 mutation 細節。
+
+## Type Information
+
+Checker 能推斷時會保留 collection element/value type。Heterogeneous JSON 或 dynamic platform data 在無法精確靜態判斷時，可能得到較寬鬆／Unknown 型別。

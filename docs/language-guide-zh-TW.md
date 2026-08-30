@@ -1,95 +1,15 @@
-# SE 語言導覽
+# SE 語言指南
 
-本文件是 `language-guide.md` 的繁體中文版，提供比快速開始更完整、但比技術參考更輕量的語言介紹。
+這個舊入口保留給既有連結使用。
 
-## 基本輸出與輸入
+目前主要文件已整理成：
 
-```se
-say "Hello"
-name = ask "Name"
-say "Hello " + name
-```
+- [快速開始](getting-started-zh-TW.md)
+- [完整教學](tutorial-zh-TW.md)
+- [語言參考](language-reference-zh-TW.md)
+- [語法速查](syntax-reference-zh-TW.md)
+- [技術參考](technical-reference-zh-TW.md)
 
-## 變數與推斷
+[English documentation](README.md)
 
-```se
-age = 15
-name = "SE"
-active = true
-```
-
-一般情況不需要先宣告型別，Checker 會推斷。
-
-## 控制流程
-
-```se
-if age >= 15
-    say "yes"
-else
-    say "no"
-
-repeat 3
-    say "hi"
-
-for n in 1..5
-    say n
-```
-
-## 函式
-
-```se
-make add a b
-    give a + b
-
-answer = add 2 3
-```
-
-## 型別與方法
-
-```se
-type Dog
-    name = ""
-
-    make bark
-        say name + " says woof"
-
-dog = Dog
-    name = "Milo"
-
-dog.bark
-```
-
-## 模組
-
-```se
-use math
-say math.sqrt 25
-```
-
-## 錯誤
-
-```se
-try
-    text = read "data.txt"
-else err
-    say err.message
-```
-
-## SE 0.6 高階能力
-
-SE 現在也支援 higher-order collections、lexical closure、泛型函式、value pattern matching、Option/Result、Task-style async、database 與 HTTPS。
-
-```se
-make identity[T] value:T -> T
-    give value
-```
-
-```se
-match status
-    case 1
-        say "ready"
-    else
-        say "other"
-```
-
-完整內容請看 `complete-language-guide-zh-TW.md` 與 `advanced-0.6-zh-TW.md`。
+只保留一套 canonical tutorial/reference，可以避免相同教學分散在多個檔案後逐漸版本不同步。

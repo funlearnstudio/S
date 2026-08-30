@@ -1,17 +1,10 @@
-# 檔案操作
+# SE 檔案操作
 
-本文件是 `files.md` 的繁體中文版。
+[English version](files.md)
 
-SE 提供簡單的文字檔案讀寫與 File 物件。
+SE 提供簡單的 file helper，也提供 managed file value 給需要較長生命週期的資源。
 
-## read
-
-```se
-text = read "hello.txt"
-say text
-```
-
-讀取失敗時會產生 FileError，因此實務上建議：
+## Read
 
 ```se
 try
@@ -21,34 +14,37 @@ else err
     say err.message
 ```
 
-## write
+讀取失敗會產生 recoverable file error。
+
+## Write
 
 ```se
 write "hello.txt" "Hello SE"
 ```
 
-`write` 會覆寫檔案。
+`write` 會覆蓋目標檔案內容。
 
-## append
+## Append
 
 ```se
 append "log.txt" "new line\n"
 ```
 
-## open
+## Managed File Value
 
 ```se
 try
     file = open "data.txt"
+    say file.read
 else err
     say err.message
 ```
 
-`open` 回傳 managed File value，由 Runtime 管理資源。
+底層 file resource 由 Runtime 管理。即使有 explicit close operation，一般 SE code 也不需要管理 raw stream pointer 或 manual allocation。
 
-## file module
+## file Module
 
-也可以：
+也可以使用 module form：
 
 ```se
 use file
@@ -57,9 +53,9 @@ text = file.read "data.txt"
 file.write "out.txt" text
 ```
 
-## 路徑
+## Paths
 
-檔案 API 可以搭配 `use path`：
+File API 可在支援的位置搭配 Path value：
 
 ```se
 use path
@@ -69,4 +65,8 @@ if path.exists p
     say read p
 ```
 
-SE 的方向是讓日常檔案工作簡單，同時把錯誤明確交給 `try` 處理。
+## Error Model
+
+File failure 使用 SE recoverable error，不會直接讓 Interpreter 因底層 I/O failure 崩潰。Syntax/type problem 則屬於 execution 前的 compiler error。
+
+處理任意 binary buffer 時應使用 `Bytes` API，不要把所有 binary data 都當成 Text。

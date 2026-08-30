@@ -1,34 +1,62 @@
-# 範例程式導覽
+# SE 範例索引
 
-本文件是 `examples.md` 的繁體中文版。
+[English version](examples.md)
 
-`examples/` 目錄用來展示可直接執行的 SE 程式。建議學習時先閱讀原始碼，再用 `se check` 與 `se run` 驗證。
+可執行範例集中放在 `examples/`。這份文件只做分類索引，不再把每個 source 重複複製進 docs。
 
-## 基本流程
+## 語言基礎
+
+- `examples/ask.s` — 輸入。
+- `examples/function.s` — 函式。
+- `examples/collections.s` — List / Map / Set 基礎。
+- `examples/errors.s` — Recoverable error。
+- `examples/files.s` — File operation。
+- `examples/advanced.se` — 較完整的語言／Runtime 功能。
+- `examples/modern-control.se` — 新一點的 control-flow 範例。
+
+部分舊 example 仍使用 `.s` 作 compatibility；新的 source 應使用 `.se`。
+
+## Web
+
+- `examples/component-web.se` — `make` + `html/css/js/page` Component model。
+- `examples/browser-api.se` — Browser request、JSON 傳送、取消 request、Form 與 multi-page navigation。
+- `examples/web-app.se` — 其他 Web 範例。
+
+建置 Component Web example：
 
 ```bash
-se check examples/function.s
-se run examples/function.s
+se web build examples/browser-api.se dist
 ```
 
-舊的 `.s` 範例目前仍可使用；新的程式建議使用 `.se`。
+如果使用 repository 內尚未 install 的 build：
 
-## 主要範例類型
+```bash
+./build/se web build examples/browser-api.se dist
+```
 
-- `ask.s`：輸入與輸出。
-- `function.s`：`make` 與 `give`。
-- `collections.s`：List / Map / Set。
-- `errors.s`：`try` / `fail`。
-- `files.s`：檔案 I/O。
-- `type.s` / methods 類範例：user-defined type 與 method。
-- modules 範例：`use` 與模組載入。
-- `platform.se`：JSON、text、process 等平台 API。
-- `web-router.se`：Web router 與 request/response。
-- `generics.se`：SE 0.6 泛型函式。
-- `advanced.se`：filter/map/reduce、closure、pattern matching、Option/Result、async、database 等 0.6 功能。
+## Backend / Platform
 
-## 建議順序
+- `examples/database-adapters.se` — Database adapter。
+- `examples/ecosystem.se` — Runtime / ecosystem 功能。
+- `examples/game.s` — Game/runtime example。
 
-先看基本 I/O 與函式，再看 collections、type、module、errors，最後進入 `platform.se`、Web 與 `advanced.se`。
+## 怎麼執行 Example
 
-所有範例都應視為「可以跑的文件」。如果教學文字和程式行為不同，以目前測試通過的實作為準，並回頭修正文件。
+```bash
+se run examples/advanced.se
+```
+
+Static check：
+
+```bash
+se check examples/advanced.se
+```
+
+如果 GitHub `main` 已經有某個 example，但本機 checkout 找不到，先同步 repository：
+
+```bash
+git switch main
+git pull --ff-only
+```
+
+Example 代表它所在 revision 的實際 implementation；帶版本號的設計文件可能另外描述未來或更新階段功能，兩者不要混為一談。

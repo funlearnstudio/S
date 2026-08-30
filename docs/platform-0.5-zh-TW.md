@@ -1,71 +1,66 @@
-# SE 0.5 Web 平台
+# SE 0.5 Application / Web Platform
 
-本文件是 `platform-0.5.md` 的繁體中文版。
+[English version](platform-0.5.md)
 
-SE 0.5 把 JSON、文字/集合工具、測試、process、HTTP、Web router 與 JavaScript/TypeScript bridge 加入語言。
+這份版本化文件記錄 0.5 stage：SE 加入較完整的 application/Web runtime module，同時保持 core language syntax 精簡。
 
 ## JSON
 
 ```se
 use json
 
-text = json.stringify ["name": "SE", "ok": true]
-pretty = json.pretty [1, 2, 3]
-value = json.parse "{\"x\":1}"
+value = json.parse "{\"name\":\"SE\"}"
+say json.stringify value
+say json.pretty value
 ```
 
-`json.parse` 可產生不同結構，因此 Checker 目前以較寬鬆的 Unknown 表示其結果。
+JSON object 對應 Map、array 對應 List、boolean/number/text 對應 SE value、null 對應 None。Heterogeneous parse result 在 static type 上可能較寬鬆。
 
-## text
+## Text / Collections
 
 ```se
 use text
+use collections
 
-clean = text.trim "  SE  "
+clean = text.trim "  hello  "
 parts = text.split "a,b,c" ","
-joined = text.join parts "-"
+sorted = collections.sort [3, 1, 2]
 ```
 
-另有 contains、starts、ends、replace、repeat。
+0.5 建立常用 text/collection utility module；0.6 再加入更完整的 higher-order collection API。
 
-## collections
-
-0.5 提供 reverse、contains、first、last、unique、sort、keys、values；0.6 再加入 filter/map/reduce、sort_by 與 slice。
-
-## test
+## Test Assertions
 
 ```se
 use test
 
 test.ok true
 test.equal 2 + 2 4
-test.not_equal 1 2
 ```
 
-Assertion failure 會讓 `se test` 判定測試失敗。
+Assertion failure 會和 `se test` 整合。
 
-## process
+## Process Bridge
 
 ```se
 use process
 
-code = process.run "echo hello"
-out = process.output "echo hello"
+code = process.run "echo SE"
+output = process.output "echo SE"
 ```
 
-不要把不可信輸入直接拼進 shell command。
+Process helper 使用 OS command execution；應避免把不可信文字直接拼成 shell command。
 
-## HTTP client
+## HTTP Client
 
 ```se
 use http
-
-body = http.get "http://example.com"
+body = try http.get "http://example.com/"
 ```
 
-0.5 的內建 socket client 是 plain `http://`；HTTPS 在 0.6 透過 `use https` 補上。
+0.5 built-in transport 是 plain HTTP；HTTPS 在 0.6 line 另外加入。
 
-## Web router
+## Web Server / Router
 
 ```se
 use web
@@ -78,26 +73,34 @@ web.get "/hello/:name" hello
 try web.listen 8080
 ```
 
-支援 GET、POST、PUT、PATCH、DELETE、route param、query/header/body、text/json/response helper，以及 in-memory `web.handle` 測試。
+這個 stage 包含常用 HTTP method、route parameter、request accessor、response helper 與 in-memory route testing。
 
-目前 server 是同步、blocking、單連線處理模型，適合教學、開發與小型服務，不宣稱是高併發 production server。
+Server model 是 synchronous/blocking，適合教學、開發與小型服務，不應描述成 hardened high-concurrency production server。
 
-## JS / TS bridge
+## JavaScript / TypeScript Bridge
 
 ```se
 use js
-js.run "tool.js"
-
 use ts
-ts.compile "app.ts"
+
+output = js.output "script.js"
+code = ts.compile "app.ts"
 ```
 
-需要 Node.js；TypeScript 功能另外需要 `ts-node` / `tsc`。
+這些 bridge 依賴對應的 Node / TypeScript external tooling。
 
-## Web scaffold
+## Layered Interoperability
 
-```bash
-se new web mysite
+SE 將不同邊界分層：
+
+```text
+C ABI / .snative / se bind   native library
+process                      CLI tool
+js / ts                      Node/TypeScript tooling
+HTTP / JSON                  language-neutral service
+Web/browser output           frontend integration
 ```
 
-會建立 SE backend 與 HTML/CSS/JS/TS frontend，以及 `se-api.js` / `se-api.ts` browser fetch bridge。
+這樣不需要把每個 foreign language / platform 都變成新的 compiler syntax system。
+
+目前 Web Component / Browser API 請看 [SE Web Language](web-language-0.8-zh-TW.md) 與 [Browser API](browser-api-0.8-zh-TW.md)。

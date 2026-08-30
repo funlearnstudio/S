@@ -1,161 +1,80 @@
-# SE 0.4 platform direction
+# SE 0.4 Platform Foundation
 
-SE 0.4 starts turning the language from a small native language into a broader application platform while keeping the rule: **simple at every level**.
+[繁體中文版](platform-0.4-zh-TW.md)
 
-## Implemented on the `se-0.4-platform` branch
+This versioned document records the 0.4 platform stage: SE began expanding from a small executable language into a project/tooling platform while keeping **Simple at every level**.
 
-### Built-in help
+## Contextual help
 
-Every value can expose contextual help through `.help`.
+Values can expose basic help through `.help`:
 
 ```se
 nums = [1, 2, 3]
-nums.help
+say nums.help
 ```
 
-The runtime reports the value type and useful members. Unknown-member diagnostics also point users toward `.help`.
+Unknown-member diagnostics can direct users toward this help path.
 
-### CLI help and diagnostics
+## CLI tooling
 
-```sh
+```bash
 se help
 se doctor
 ```
 
-`se doctor` reports the SE version, platform, C++ compiler selection, package-home environment, and current directory.
+`se doctor` reports useful environment/toolchain information such as version, platform, compiler/tool availability, package-home settings and current directory.
 
-### General application projects
+## Project scaffolding
 
-```sh
-se new app my-app
+```bash
+se new app myapp
+se new web mysite
 ```
 
-Creates a normal SE application with `src/main.se` and a minimal README.
+0.4 established application/Web project structure. Later platform versions added deeper HTTP/router/browser behavior; this document should be read as a historical version stage, not the current full Web reference.
 
-### Web project layout
+## Standard modules introduced at this stage
 
-```sh
-se new web my-site
+### math
+
+```se
+use math
+say math.pi
+say math.sqrt 25
 ```
 
-Creates a project containing:
+### random
 
-- `backend/main.se`
-- `frontend/index.html`
-- `frontend/style.css`
-- `frontend/app.js`
-- `frontend/app.ts`
+```se
+use random
+n = random.int 1 10
+x = random.num
+```
 
-This gives SE projects a stable layout for combining an SE backend with HTML, CSS, JavaScript, and TypeScript. The built-in HTTP server/API runtime is **not implemented yet**; the project generator deliberately says so instead of pretending the backend is already complete.
+### os
 
-### Standard modules added in this branch
+```se
+use os
+say os.platform
+say os.cwd
+```
 
-`math` provides `pi`, `sqrt`, `abs`, `floor`, `ceil`, `round`, `pow`, `min`, and `max`.
+## Package-home naming
 
-`random` provides inclusive `random.int min max` and zero-argument `random.num` for a value from 0 to 1.
-
-`os` provides `platform`, `cwd`, `getenv`, and `has_env`.
-
-The checker knows their signatures, so these modules participate in SE static checking rather than being runtime-only helpers.
-
-### Package-home migration
-
-The module loader now prefers `SE_HOME/packages` and falls back to the legacy `S_HOME/packages` location.
-
-### Existing native-language bridge
-
-SE already has `.snative`, a C ABI bridge, Bytes interop, opaque native handles, cleanup support, and `se bind`. This is the base for calling libraries written in C and C++ and for creating adapters to other languages.
-
-## Next language-level features
-
-To reach a Python/C++-like advanced ceiling without making beginner syntax heavy, SE should add advanced capabilities in layers:
-
-1. generics / type parameters
-2. interfaces or traits
-3. iterators and richer collection operations
-4. closures and first-class functions
-5. async / await and tasks
-6. concurrency primitives
-7. richer pattern matching
-8. enums / tagged unions
-9. explicit low-level and `unsafe` facilities for systems work
-10. stronger ownership/lifetime rules where native resource control is needed
-
-These should remain optional: simple programs should not need to understand them.
-
-## Standard-library groups
-
-Existing core modules include `file`, `path`, and `time`. SE 0.4 adds the first `math`, `random`, and `os` APIs. The next standard-library groups are planned as modules instead of hundreds of global functions:
-
-- `text` — text processing
-- `collections` — collection helpers
-- `json` — JSON parse/stringify
-- `process` — child processes
-- `net` — sockets and network primitives
-- `http` — HTTP client/server
-- `web` — routing, requests, responses, static files, JSON APIs
-- `async` — tasks, timers, asynchronous I/O
-- `test` — assertions and test runner
-- `crypto` — safe high-level hashing/encoding APIs
-
-The implementation rule is that libraries can be complex internally while their public SE API remains short and predictable.
-
-## Web target
-
-The intended stack is:
+The platform migration prefers:
 
 ```text
-HTML / CSS / JS / TS
-        ↕
-     web bridge
-        ↕
-   SE backend/API
-        ↕
- HTTP / JSON / files / database adapters
+SE_HOME/packages
 ```
 
-Longer-term, browser-side SE can target WebAssembly while still allowing normal HTML/CSS/JS/TS projects.
+with legacy `S_HOME/packages` fallback where compatibility remains.
 
-## Other-language interop
+## Native bridge foundation
 
-Interop should grow in layers:
+The C ABI / `.snative` / Bytes / managed-handle / `se bind` path provides the systems interoperability layer without forcing ordinary SE programs to understand C++ ABI details.
 
-```text
-SE
-├─ C ABI      (existing foundation)
-├─ C++        (through C ABI wrappers / generated bindings)
-├─ Python     (planned adapter)
-├─ JavaScript (planned native/Wasm bridge)
-├─ TypeScript (planned typed JS bridge definitions)
-├─ Rust       (C ABI adapter)
-├─ Go         (C ABI adapter)
-└─ Java/.NET  (FFI/JNI/PInvoke-style adapters)
-```
+## Design direction
 
-The compiler should keep one stable ABI boundary instead of implementing a completely separate foreign-function system for every language.
+0.4's broader lesson is still used by current SE: new capabilities should usually arrive as predictable modules, runtime services and tooling rather than large amounts of new syntax.
 
-## Diagnostics direction
-
-SE errors should try to answer three questions:
-
-1. What happened?
-2. Where did it happen?
-3. What can I do next?
-
-The `.help` system and member guidance are the first step. Future diagnostics should add spelling suggestions, fix-its, unused-variable warnings, unreachable-code detection, suspicious-condition detection, and optional strict linting.
-
-## Application ceiling
-
-The long-term target is one language usable for:
-
-- beginner scripts
-- CLI tools
-- desktop applications
-- backend services
-- web projects
-- games
-- data / AI applications
-- native libraries
-- embedded and systems-oriented code through explicit low-level facilities
-
-This document is a roadmap. Only items explicitly listed in the **Implemented** section should be treated as present in the current branch.
+For current behavior, use the main [Documentation Index](README.md). For later historical stages, see [SE 0.5 Platform](platform-0.5.md) and [SE 0.6 Advanced Guide](advanced-0.6.md).

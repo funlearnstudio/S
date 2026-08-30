@@ -1,49 +1,65 @@
-# SE project checks and tests
+# SE Testing and Project Checks
 
-SE 0.4 adds project-wide tooling so larger applications do not have to check files one by one.
+[繁體中文版](testing-zh-TW.md)
 
-## Check a whole project
+SE provides project-wide static checking and a lightweight test runner so larger projects do not need to validate files one by one.
 
-```sh
+## Check one file
+
+```bash
+se check app.se
+```
+
+## Check a source tree
+
+```bash
 se check-all .
 ```
 
-SE recursively finds `.se` files (and legacy `.s` files), parses them, runs the static checker, prints `PASS` / `FAIL`, and returns a non-zero exit code when any file fails. Build folders, `.git`, and `node_modules` are ignored.
-
 You can also check a subdirectory:
 
-```sh
+```bash
 se check-all backend
 ```
 
-## Test runner
+The command recursively discovers SE source, skips common generated/dependency directories, reports pass/fail results and returns a failing exit code when checks fail, making it suitable for CI.
 
-Test files end in `_test.se`:
+## Test files
+
+Test files conventionally end in `_test.se`.
 
 ```se
-value = 2 + 2
-if value != 4
-    fail "2 + 2 should be 4"
+use test
+
+test.equal 4 2 + 2
+test.ok true
 ```
 
-Run all tests recursively:
+A simple test may also call `fail` directly when a condition is wrong.
 
-```sh
+## Run tests
+
+```bash
 se test .
 ```
 
-A test passes when it type-checks and finishes without an SE error or runtime failure. `fail "message"` makes a test fail. The runner prints a final passed/failed summary and returns a non-zero exit code if any test fails, so it can be used in CI.
+The test runner recursively finds test files, checks/runs them, prints a summary and returns a non-zero exit code when any test fails.
 
-## New projects
+## Project scaffolding
 
-`se new app NAME` now creates:
+`se new app NAME` creates an application structure with source and tests. `se new web NAME` creates the Web/project scaffold supported by the current CLI.
 
-```text
-NAME/
-├── src/main.se
-└── tests/main_test.se
+## Compiler regression tests
+
+The SE implementation itself also uses CMake/CTest for lower-level regression coverage:
+
+```bash
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure
 ```
 
-`se new web NAME` creates a backend test folder as well as the HTML/CSS/JavaScript/TypeScript frontend scaffold.
+Implementation-level coverage includes lexer/parser/checker behavior, interpreter execution, native backend parity, native ABI/Bytes/resource lifetime, Web builds and CLI smoke tests.
 
-This is the first testing layer. Future versions can add a richer `test` standard module with assertions, fixtures, setup/teardown, filtering, and test metadata while keeping simple tests valid.
+## CI principle
+
+A change is not considered validated only because the compiler builds. Language changes should also have focused regression tests that demonstrate the intended SE behavior.

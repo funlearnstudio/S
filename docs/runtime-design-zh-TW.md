@@ -1,53 +1,77 @@
-# Runtime 設計
+# SE Runtime 設計
 
-本文件是 `runtime-design.md` 的繁體中文版。
+[English version](runtime-design.md)
 
-SE Runtime 負責把簡單的語言表面轉成安全、可管理的執行期行為。
+SE Runtime 的工作，是把簡單的語言表面轉成有檢查、有生命週期管理的執行期行為。
 
-## Value
+## Runtime Value Family
 
-所有 SE 執行期資料都以 Runtime Value 表示，例如：
+重要 value 包含：
 
-- None
-- Bool
-- Int / Num
-- Text
-- Bytes
-- List / Map / Set
-- Object
-- Module
-- Function / Callable
-- File / Path / Duration / Time
-- NativeHandle
+```text
+None
+Bool
+Int / Num
+Text
+Bytes
+List / Map / Set
+Function / Callable
+Object
+Module
+Error
+File / Path
+Duration / Time
+NativeHandle
+Task
+```
 
-## Managed data
+## Managed Ownership
 
-集合、物件與其他較大型資料由 Runtime 管理生命週期。一般 SE 程式不直接操作 raw pointer。
+Collection、Object、Function、File、Native Handle 等由 Runtime 管理生命週期。一般 SE code 不直接操作 raw pointer、`new/delete`、`malloc/free` 或 C++ ownership primitive。
 
-## Collections safety
+## Checked Operations
 
-List 索引會檢查範圍。錯誤索引應產生可讀錯誤，而不是造成未定義記憶體存取。
+Runtime operation 會在執行危險的 host-language operation 前先檢查輸入，例如：
 
-## Callable
+- List index bounds
+- 無效 member access
+- function arity 錯誤
+- condition/value type 不合法
+- division 與無效 arithmetic case
+- file/native failure
 
-函式在 Runtime 中可以成為 Value。SE 0.6 的巢狀 `make` 會保存 lexical environment，因此可建立 closure；`function.bind` 則可產生 partial application callable。
+Runtime 能偵測的 failure 應轉成 SE error，而不是 C++ undefined behavior。
 
-## Error model
+## Function 與 Closure
 
-Runtime failure 會包含 kind、message、source/line 等資訊，並可透過 SE 的 `try / else err` 處理。
+Function 是 Runtime value。巢狀 `make` 可以保存 lexical environment，因此能形成 closure；Runtime 也可提供 bind / partial application 等 function helper。
 
-## Resource lifetime
+## Object
 
-File 與 native handle 應由 Runtime 管理釋放。C ABI 的 opaque resource 可以附帶 deleter，讓離開生命週期時自動 cleanup。
+User-defined object 擁有獨立 field storage。Method 可以解析 current-object field，但不會把 raw object layout 暴露給一般 SE source。
 
-## Platform modules
+## Error Value
 
-JSON、Web、process、DB、HTTPS 等平台能力透過 built-in module 暴露給 Interpreter，而不是把大量特殊語法硬塞進 Parser。
+Recoverable failure 會保存 message、kind 與可用時的 source location。`try / else err` 處理這些 runtime failure；compiler/checker error 則保持獨立。
 
-## 設計方向
+## Resource Lifetime
 
-Runtime 的核心原則是：
+File 與 native resource 使用 managed lifetime。Opaque native handle 可以附帶 cleanup function，讓 managed value 被釋放時自動 cleanup。
 
-> 使用者看到簡單 API，但執行期仍要有明確型別、資源邊界、錯誤與安全檢查。
+## Task 與 Concurrency Boundary
 
-SE 可以讓 Runtime 內部更複雜，但不應把記憶體管理與大量樣板推回一般 SE 程式。
+Task-style async/await 由 Runtime 管理。需要進入 Interpreter VM 的 callback 會依 implementation 做序列化，因此不應把目前模型描述成任意 SE code 的 unrestricted parallel execution。
+
+## Platform Modules
+
+JSON、process、HTTP/HTTPS、DB adapter 等平台功能主要透過 Runtime module 提供，而不是每一種 subsystem 都增加新的特殊語法。
+
+## Browser Runtime
+
+SE Web 會產生 browser-side Runtime，用於 HTTP、navigation、request cancellation 與 DOM helper。Browser 是不同 execution environment：Server filesystem、native、database secret 等能力不會自動變成 browser API。
+
+## 設計原則
+
+> 當複雜度放進 Runtime 能讓一般 SE code 更安全、更簡單時，就應該把複雜度留在 Runtime。
+
+Runtime 內部可以複雜，但一般程式不應被迫自己管理 memory、ABI detail 或 host-language boilerplate。

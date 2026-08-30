@@ -1,33 +1,50 @@
-# SE GitHub Linguist submission bundle
+# SE GitHub Linguist Submission Bundle
 
-This directory keeps the files and wording needed for the future upstream `github-linguist/linguist` submission.
+[繁體中文版](README-zh-TW.md)
 
-SE already has an official TextMate grammar at `vscode/syntaxes/se.tmLanguage.json` with scope `source.se`.
+This directory keeps the files needed for a future upstream `github-linguist/linguist` submission.
 
-## Upstream eligibility gate
-
-GitHub Linguist currently requires widespread public usage before accepting a new language. For a normal source extension such as `.se`, the current documented threshold is at least 2,000 indexed public files from the last year, excluding forks, with a reasonable distribution across distinct users and repositories.
-
-Evidence query:
+SE's maintained TextMate grammar is:
 
 ```text
-NOT is:fork path:*.se
+vscode/syntaxes/se.tmLanguage.json
 ```
 
-Do not submit the upstream PR before the usage requirement is met. Artificially creating files or repositories to inflate the count is not valid evidence and can be filtered out during review.
+with scope:
+
+```text
+source.se
+```
+
+## Eligibility gate
+
+GitHub Linguist requires real public usage before accepting a new programming language/extension. Under the current contributor guidance, ordinary extensions need at least 2,000 indexed public files (200 for extensions/files expected only once per repository), excluding forks and with reasonable distribution across users/repositories.
+
+Do not open an upstream PR until the current Linguist requirements are met. Artificially generating repositories/files to inflate usage is not valid evidence and may be filtered during review.
+
+Requirements can change; verify Linguist's current contributor documentation again before submission.
 
 ## Files in this bundle
 
-- `language-entry.yml` — proposed `languages.yml` entry before `language_id` generation.
-- `sample.se` — representative non-Hello-World SE sample for `samples/SE/`.
-- `pull-request.md` — draft information to paste into the Linguist PR template when eligible.
+- `language-entry.yml` — proposed language metadata before generated ID assignment.
+- `sample.se` — representative SE sample for submission preparation.
+- `pull-request.md` — draft information for the future Linguist PR.
 
-## Upstream procedure once eligible
+## Upstream process
+
+When SE is eligible:
 
 1. Fork `github-linguist/linguist`.
-2. Add the SE entry from `language-entry.yml` to `lib/linguist/languages.yml` in alphabetical order.
-3. Run `script/add-grammar` against the official SE grammar source.
-4. Add representative real-world SE samples under `samples/SE/`.
-5. Run `script/update-ids`; do not invent a language ID manually.
-6. Run `bundle exec rake test`.
-7. Open the PR using Linguist's current PR template and include public usage evidence.
+2. Add the SE entry to `lib/linguist/languages.yml` following current contribution rules.
+3. Add the official grammar through Linguist's grammar tooling.
+4. Add representative real-world SE samples with source/license information.
+5. Generate the language ID with Linguist's tooling; do not invent it manually.
+6. Add any required heuristics/tests.
+7. Run the required test suite.
+8. Open the PR using Linguist's current template and include public-usage evidence.
+
+## Important boundary
+
+This bundle is preparation material only. Its presence in the SE repository does not mean GitHub.com already recognizes `.se` as the SE language.
+
+For the user-facing explanation, see [GitHub Syntax Highlighting](../docs/github-syntax-highlighting.md).
