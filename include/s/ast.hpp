@@ -88,6 +88,40 @@ struct Match final : Stmt {
   Block else_block;
 };
 
+// Web syntax is contextual rather than a new family of lexer keywords. These
+// nodes keep HTML/CSS/JS related data associated with the same `make`
+// component while leaving normal SE functions and statements unchanged.
+struct WebElement {
+  SourcePos pos;
+  std::string tag;
+  std::vector<ExprPtr> values;
+  std::vector<WebElement> children;
+};
+struct WebCssItem {
+  SourcePos pos;
+  std::string name;
+  std::vector<ExprPtr> values;
+  std::vector<WebCssItem> children;
+};
+struct WebEvent {
+  SourcePos pos;
+  std::string event;
+  Block body;
+};
+struct WebSection final : Stmt {
+  WebSection(SourcePos p,std::string k):Stmt(p),kind(std::move(k)){}
+  std::string kind; // html, css, style, js
+  std::vector<WebElement> elements;
+  std::vector<WebCssItem> css;
+  std::vector<WebEvent> events;
+  std::vector<ExprPtr> native;
+};
+struct Page final : Stmt {
+  Page(SourcePos p,ExprPtr r,Block b):Stmt(p),route(std::move(r)),body(std::move(b)){}
+  ExprPtr route;
+  Block body;
+};
+
 struct NativeFunction {
   std::string name;
   std::string symbol;
