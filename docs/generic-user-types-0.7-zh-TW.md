@@ -81,11 +81,11 @@ type Box[T]
     make get -> T
         give value
 
-    make set next:T
+    make replace next:T
         value = next
 ```
 
-對 `Box[Int]` 而言，checker 會把 `get` 視為回傳 `Int`，並要求 `set` 的參數是 `Int`。對 `Box[Text]` 則會自動特化成 `Text`。
+對 `Box[Int]` 而言，checker 會把 `get` 視為回傳 `Int`，並要求 `replace` 的參數是 `Int`。對 `Box[Text]` 則會自動特化成 `Text`。
 
 ## 泛型函式與泛型型別可以一起使用
 
