@@ -69,7 +69,8 @@ task = browser.get "/api/users" ["key": "load-users", "timeout": 10000]
 
 ```se
 payload = ["name": "SE", "message": "Hello"]
-task = browser.post_json "/api/messages" payload ["throw_http": true]
+options = ["throw_http": true]
+task = browser.post_json "/api/messages" payload options
 result = async.await task
 ```
 
