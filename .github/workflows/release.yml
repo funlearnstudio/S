@@ -87,8 +87,45 @@ jobs:
           path: package/${{ matrix.asset }}.${{ matrix.archive }}
           if-no-files-found: error
 
+  package-vscode:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout validated main commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: vscode/package.json
+
+      - name: Install VS Code packaging tool
+        working-directory: vscode
+        run: npm install
+
+      - name: Validate TextMate grammar
+        run: |
+          node -e "const fs=require('fs'); const g=JSON.parse(fs.readFileSync('vscode/syntaxes/se.tmLanguage.json','utf8')); if(g.scopeName!=='source.se') process.exit(1);"
+
+      - name: Package SE VS Code extension
+        working-directory: vscode
+        run: npx vsce package --out ../se-language-0.6.0.vsix
+
+      - name: Upload VS Code extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: se-language-0.6.0-vsix
+          path: se-language-0.6.0.vsix
+          if-no-files-found: error
+
   publish:
-    needs: build-packages
+    needs: [build-packages, package-vscode]
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
@@ -98,10 +135,10 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      - name: Download packages
+      - name: Download release artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: se-0.6.0-*
+          pattern: se-*
           path: release-assets
           merge-multiple: true
 
