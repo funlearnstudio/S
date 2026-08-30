@@ -2,9 +2,10 @@ value = 1
 value += 4
 value *= 2
 value -= 3
-value /= 7
-value += 9
-value %= 6
+value %= 5
+
+ratio = 14.0
+ratio /= 2
 
 if value > 5
     say "large"
@@ -14,3 +15,4 @@ else
     say "small"
 
 say value
+say ratio
