@@ -6,15 +6,15 @@ Runnable examples live in `examples/`. Use this page as a map rather than duplic
 
 ## Language basics
 
-- `examples/ask.s` — input.
-- `examples/function.s` — functions.
-- `examples/collections.s` — List/Map/Set basics.
-- `examples/errors.s` — recoverable errors.
-- `examples/files.s` — file operations.
+- `examples/ask.se` — input.
+- `examples/function.se` — functions.
+- `examples/collections.se` — List/Map/Set basics.
+- `examples/errors.se` — recoverable errors.
+- `examples/files.se` — file operations.
 - `examples/advanced.se` — broader language/runtime features.
 - `examples/modern-control.se` — newer control-flow examples.
 
-Some older examples still use `.s` for compatibility. New source should use `.se`.
+All primary examples use `.se`. Legacy `.s` support remains only for compatibility testing and migration paths.
 
 ## Web
 
@@ -38,7 +38,7 @@ When using an uninstalled source build:
 
 - `examples/database-adapters.se` — database adapter examples.
 - `examples/ecosystem.se` — runtime/ecosystem features.
-- `examples/game.s` — game/runtime example.
+- `examples/game.se` — game/runtime example.
 
 ## How to use examples
 

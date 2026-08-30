@@ -31,14 +31,14 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           ./build/se --version
-          ./build/se check examples/hello.s
-          ./build/se run examples/hello.s
-          ./build/se build examples/hello.s
+          ./build/se check examples/hello.se
+          ./build/se run examples/hello.se
+          ./build/se build examples/hello.se
           ./examples/hello
       - name: CLI smoke test (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           .\build\Release\se.exe --version
-          .\build\Release\se.exe check examples\hello.s
-          .\build\Release\se.exe run examples\hello.s
+          .\build\Release\se.exe check examples\hello.se
+          .\build\Release\se.exe run examples\hello.se
