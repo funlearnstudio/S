@@ -24,16 +24,16 @@ else
 
 ## Start here / 從這裡開始
 
-Choose a language / 選擇語言：
-
 | English | 繁體中文 |
 | --- | --- |
 | [Documentation](docs/README.md) | [文件總覽](docs/README-zh-TW.md) |
 | [Getting Started](docs/getting-started.md) | [快速開始](docs/getting-started-zh-TW.md) |
 | [Tutorial](docs/tutorial.md) | [完整教學](docs/tutorial-zh-TW.md) |
+| [Language Reference](docs/language-reference.md) | [語言參考](docs/language-reference-zh-TW.md) |
 | [Technical Reference](docs/technical-reference.md) | [技術參考](docs/technical-reference-zh-TW.md) |
 | [SE Web](docs/web-language-0.8.md) | [SE Web](docs/web-language-0.8-zh-TW.md) |
 | [Browser API](docs/browser-api-0.8.md) | [Browser API](docs/browser-api-0.8-zh-TW.md) |
+| [VS Code](vscode/README.md) | [VS Code](vscode/README-zh-TW.md) |
 
 ## Install / 安裝
 
@@ -56,9 +56,9 @@ se --version
 se doctor
 ```
 
-The prebuilt installer is enough for the REPL, `se run`, `se check`, `se check-all`, and `se test`. `se build` additionally requires a C++20 compiler because the native backend currently emits C++20.
+The prebuilt installer is enough for the REPL, `se run`, `se check`, `se check-all`, `se test`, and `se web build`. `se build` additionally requires a C++20 compiler because the native backend currently emits C++20.
 
-預編譯安裝器即可使用 REPL、`se run`、`se check`、`se check-all` 與 `se test`。`se build` 目前會產生 C++20，因此另外需要 C++20 編譯器。
+預編譯安裝器即可使用 REPL、`se run`、`se check`、`se check-all`、`se test` 與 `se web build`。`se build` 目前會產生 C++20，因此另外需要 C++20 編譯器。
 
 For source builds and platform details, see [Installation](docs/installation.md).
 
@@ -103,9 +103,9 @@ se new web mysite
 - interpreter and C++20 native backend
 - SE Web components, routing and browser API
 
-The documentation separates **released language behavior**, **newer Web/compiler capabilities**, and **future roadmap** so versioned design work is not confused with the stable release.
+The documentation separates **stable release behavior**, **newer current-source capabilities**, and **versioned design/roadmap work** so future-stage material is not confused with the released language.
 
-文件會把**正式版本行為**、**較新的 Web/compiler 功能**與**未來 Roadmap**分開，避免把規劃中的功能和穩定版混在一起。
+文件會把**正式版本行為**、**目前 source 中較新的能力**與**版本化設計／Roadmap**分開，避免把未來階段內容誤當成正式 Release。
 
 ## Architecture / 架構
 
