@@ -1,0 +1,18 @@
+value = 1
+value += 4
+value *= 2
+value -= 3
+value %= 5
+
+ratio = 14.0
+ratio /= 2
+
+if value > 5
+    say "large"
+else if value > 2
+    say "middle"
+else
+    say "small"
+
+say value
+say ratio

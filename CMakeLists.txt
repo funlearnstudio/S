@@ -6,8 +6,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(s_core
   src/lexer/token.cpp src/lexer/lexer.cpp src/parser/parser.cpp
-  src/runtime/error.cpp src/runtime/value.cpp src/runtime/platform_base.cpp src/runtime/advanced.cpp src/modules/modules.cpp src/ffi/ffi.cpp src/ffi/bindgen.cpp
-  src/interpreter/interpreter.cpp src/type/checker.cpp src/compiler/compiler.cpp)
+  src/runtime/error.cpp src/runtime/value.cpp src/runtime/platform_base.cpp src/runtime/advanced.cpp src/runtime/database.cpp src/modules/modules.cpp src/ffi/ffi.cpp src/ffi/bindgen.cpp
+  src/interpreter/interpreter.cpp src/type/checker.cpp src/compiler/compiler.cpp src/compiler/web_compiler.cpp src/compiler/component_web.cpp)
 target_include_directories(s_core PUBLIC include)
 target_compile_definitions(s_core PRIVATE S_SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}" S_NATIVE_BUILD_DIR="${CMAKE_CURRENT_BINARY_DIR}")
 target_link_libraries(s_core PUBLIC ${CMAKE_DL_LIBS})
@@ -84,10 +84,17 @@ if(BUILD_TESTING)
   set_tests_properties(cli_generic_user_types_missing_field PROPERTIES WILL_FAIL TRUE)
   add_test(NAME cli_generic_user_types_arity COMMAND se check ${CMAKE_SOURCE_DIR}/examples/generic-user-types-arity.se)
   set_tests_properties(cli_generic_user_types_arity PROPERTIES WILL_FAIL TRUE)
+  add_test(NAME cli_modern_control COMMAND se run ${CMAKE_SOURCE_DIR}/examples/modern-control.se)
+  set_tests_properties(cli_modern_control PROPERTIES PASS_REGULAR_EXPRESSION "middle;3;7")
+  add_test(NAME cli_database_adapters COMMAND se run ${CMAKE_SOURCE_DIR}/examples/database-adapters.se)
+  set_tests_properties(cli_database_adapters PROPERTIES PASS_REGULAR_EXPRESSION "mongodb;gas")
+  add_test(NAME cli_component_web_check COMMAND se check ${CMAKE_SOURCE_DIR}/examples/component-web.se)
   add_test(NAME cli_help COMMAND se help)
   add_test(NAME cli_doctor COMMAND se doctor)
   add_test(NAME cli_check_all COMMAND se check-all ${CMAKE_SOURCE_DIR}/examples/project-tests)
   add_test(NAME cli_project_test COMMAND se test ${CMAKE_SOURCE_DIR}/examples/project-tests)
+  add_test(NAME cli_web_build COMMAND ${CMAKE_COMMAND} -DSE_EXE=$<TARGET_FILE:se> -DSE_ROOT=${CMAKE_SOURCE_DIR} -DSE_WORK=${CMAKE_CURRENT_BINARY_DIR}/web-build -P ${CMAKE_SOURCE_DIR}/tests/web_build.cmake)
+  add_test(NAME cli_component_web_build COMMAND ${CMAKE_COMMAND} -DSE_EXE=$<TARGET_FILE:se> -DSE_ROOT=${CMAKE_SOURCE_DIR} -DSE_WORK=${CMAKE_CURRENT_BINARY_DIR}/component-web-build -P ${CMAKE_SOURCE_DIR}/tests/component_web_build.cmake)
 
   if(NOT WIN32)
     set_tests_properties(s_tests PROPERTIES ENVIRONMENT "S_NATIVE_PATH=${CMAKE_CURRENT_BINARY_DIR}")

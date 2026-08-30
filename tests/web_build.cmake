@@ -1,0 +1,31 @@
+file(REMOVE_RECURSE "${SE_WORK}")
+file(MAKE_DIRECTORY "${SE_WORK}")
+execute_process(
+  COMMAND "${SE_EXE}" web build "${SE_ROOT}/examples/web-app.se" "${SE_WORK}"
+  RESULT_VARIABLE code
+  OUTPUT_VARIABLE output
+  ERROR_VARIABLE error
+)
+if(NOT code EQUAL 0)
+  message(FATAL_ERROR "se web build failed:\n${output}\n${error}")
+endif()
+foreach(file index.html style.css app.js app.ts)
+  if(NOT EXISTS "${SE_WORK}/${file}")
+    message(FATAL_ERROR "Missing generated ${file}")
+  endif()
+endforeach()
+file(READ "${SE_WORK}/index.html" html)
+file(READ "${SE_WORK}/style.css" css)
+file(READ "${SE_WORK}/app.js" js)
+if(NOT html MATCHES "SE Web App")
+  message(FATAL_ERROR "Generated HTML is missing title")
+endif()
+if(NOT css MATCHES "font-family")
+  message(FATAL_ERROR "Generated CSS is missing SE style output")
+endif()
+if(NOT js MATCHES "function clicked")
+  message(FATAL_ERROR "Generated JS is missing SE function output")
+endif()
+if(NOT js MATCHES "ui.mount")
+  message(FATAL_ERROR "Generated JS is missing SE UI output")
+endif()

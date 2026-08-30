@@ -14,7 +14,8 @@ enum class TokenKind {
   Type, Use, Try, Fail, Set, Map, Match, Case,
   And, Or, Not,
   Plus, Minus, Star, Slash, Percent, Power,
-  Equal, EqualEqual, BangEqual, Greater, Less, GreaterEqual, LessEqual,
+  Equal, PlusEqual, MinusEqual, StarEqual, SlashEqual, PercentEqual,
+  EqualEqual, BangEqual, Greater, Less, GreaterEqual, LessEqual,
   LeftParen, RightParen, LeftBracket, RightBracket, Comma, Colon, Dot, Range, Arrow
 };
 

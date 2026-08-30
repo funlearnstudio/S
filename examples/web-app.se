@@ -1,0 +1,33 @@
+# One SE file describes page structure, CSS and browser behavior.
+ui.page "SE Web App"
+
+ui.style "body" [
+    "font-family": "system-ui, sans-serif",
+    "margin": "2rem",
+    "background": "#f7f7f8"
+]
+
+ui.style "button" [
+    "padding": ".6rem 1rem",
+    "cursor": "pointer"
+]
+
+count = 0
+root = ui.el "main" "" ["class": "app"]
+title = ui.el "h1" "SE Web"
+button = ui.el "button" "Count" ["type": "button", "id": "counter"]
+output = ui.el "p" "0" ["aria-live": "polite"]
+
+ui.add root title button output
+
+make clicked event
+    count += 1
+    if count >= 10
+        ui.text output "10+"
+    else if count >= 5
+        ui.text output "5+"
+    else
+        ui.text output count
+
+ui.on button "click" clicked
+ui.mount root

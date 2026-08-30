@@ -5,10 +5,17 @@
 
 namespace s {
 
-const Token& Parser::peek(int o) const { return tokens_[std::min(at_+static_cast<std::size_t>(o),tokens_.size()-1)]; }
+const Token& Parser::peek(int o) const {
+  auto index=static_cast<long long>(at_)+static_cast<long long>(o);
+  if(index<0)index=0;
+  auto last=static_cast<long long>(tokens_.size()-1);
+  if(index>last)index=last;
+  return tokens_[static_cast<std::size_t>(index)];
+}
 bool Parser::check(TokenKind k) const { return peek().kind==k; }
 bool Parser::match(TokenKind k) { if(!check(k)) return false; ++at_; return true; }
 const Token& Parser::take(TokenKind k,const std::string& message) { if(!check(k)) throw Error(peek().pos,message); return tokens_[at_++]; }
+bool Parser::identifier(const std::string& name) const { return check(TokenKind::Identifier)&&peek().text==name; }
 void Parser::line_end(){ if(match(TokenKind::Newline)) return; if(check(TokenKind::Dedent)||check(TokenKind::End)) return; throw Error(peek().pos,"I expected the line to end here."); }
 
 ast::Program Parser::parse(){ ast::Program p; while(!check(TokenKind::End)){ if(match(TokenKind::Newline)) continue; p.statements.push_back(statement()); } return p; }
@@ -52,6 +59,26 @@ std::shared_ptr<ast::Function> Parser::function(SourcePos start){
   ast::TypeRef result_type;
   if(match(TokenKind::Arrow)) result_type=type_ref();
   auto b=block();
+
+  // Once a normal make block contains a Web section, preserve the shorter
+  // component form `text value` by lowering it into the same Web AST. This is
+  // contextual, so ordinary SE functions keep their existing call semantics.
+  bool web=false;
+  for(const auto& item:b)if(std::dynamic_pointer_cast<ast::WebSection>(item)){web=true;break;}
+  if(web){
+    ast::Block lowered;
+    for(const auto& item:b){
+      auto statement=std::dynamic_pointer_cast<ast::ExprStmt>(item);
+      auto call=statement?std::dynamic_pointer_cast<ast::Call>(statement->value):nullptr;
+      auto callee=call?std::dynamic_pointer_cast<ast::Variable>(call->callee):nullptr;
+      if(callee&&callee->name=="text"&&call->args.size()==1){
+        auto section=std::make_shared<ast::WebSection>(item->pos,"html");
+        section->elements.push_back({item->pos,"text",{call->args.front()}, {}});
+        lowered.push_back(section);
+      }else lowered.push_back(item);
+    }
+    b=std::move(lowered);
+  }
   return std::make_shared<ast::Function>(start,name.text,std::move(params),std::move(b),std::move(generics),std::move(param_types),std::move(result_type));
 }
 
@@ -85,8 +112,139 @@ std::shared_ptr<ast::Type> Parser::type_decl(SourcePos start){
   return std::make_shared<ast::Type>(start,name.text,std::move(fields),std::move(methods),std::move(generics));
 }
 
+std::string Parser::selector_token(const Token& token) const {
+  switch(token.kind){
+    case TokenKind::Identifier:return token.text;
+    case TokenKind::Colon:return ":";
+    case TokenKind::Dot:return ".";
+    case TokenKind::Greater:return ">";
+    case TokenKind::Star:return "*";
+    case TokenKind::LeftBracket:return "[";
+    case TokenKind::RightBracket:return "]";
+    case TokenKind::Equal:return "=";
+    case TokenKind::String:return "\""+token.text+"\"";
+    default:return token.text;
+  }
+}
+
+ast::WebElement Parser::web_element(){
+  Token tag=peek();
+  if(!check(TokenKind::Identifier))throw Error(tag.pos,"Write an HTML element name here, like div, h1, p, or button.");
+  ++at_;
+  ast::WebElement item{tag.pos,tag.text,{},{}};
+  if(!check(TokenKind::Newline)&&!check(TokenKind::Dedent)&&!check(TokenKind::End))item.values.push_back(expression());
+  if(check(TokenKind::Newline)&&peek(1).kind==TokenKind::Indent){
+    ++at_;++at_;
+    while(!check(TokenKind::Dedent)&&!check(TokenKind::End)){if(match(TokenKind::Newline))continue;item.children.push_back(web_element());}
+    take(TokenKind::Dedent,"This HTML element block was not closed correctly.");
+  }else line_end();
+  return item;
+}
+
+std::vector<ast::WebElement> Parser::web_elements(){
+  take(TokenKind::Newline,"Start HTML on the next line.");
+  take(TokenKind::Indent,"Indent HTML elements under html.");
+  std::vector<ast::WebElement> items;
+  while(!check(TokenKind::Dedent)&&!check(TokenKind::End)){if(match(TokenKind::Newline))continue;items.push_back(web_element());}
+  take(TokenKind::Dedent,"This html block was not closed correctly.");
+  return items;
+}
+
+ast::WebCssItem Parser::web_css_item(){
+  Token first=peek();
+  if(!check(TokenKind::Identifier)&&!check(TokenKind::Dot))throw Error(first.pos,"Write a CSS property or selector here.");
+  std::size_t end=at_;
+  while(end<tokens_.size()&&tokens_[end].kind!=TokenKind::Newline&&tokens_[end].kind!=TokenKind::Dedent&&tokens_[end].kind!=TokenKind::End)++end;
+  bool nested=end<tokens_.size()&&tokens_[end].kind==TokenKind::Newline&&end+1<tokens_.size()&&tokens_[end+1].kind==TokenKind::Indent;
+  if(nested){
+    std::string selector;
+    while(at_<end)selector+=selector_token(tokens_[at_++]);
+    if(selector.empty())throw Error(first.pos,"Write a CSS selector before the indented block.");
+    ++at_;++at_;
+    ast::WebCssItem item{first.pos,std::move(selector),{}, {}};
+    while(!check(TokenKind::Dedent)&&!check(TokenKind::End)){if(match(TokenKind::Newline))continue;item.children.push_back(web_css_item());}
+    take(TokenKind::Dedent,"This CSS selector block was not closed correctly.");
+    return item;
+  }
+  auto name=take(TokenKind::Identifier,"Write a CSS property name here.");
+  ast::WebCssItem item{name.pos,name.text,{}, {}};
+  if(check(TokenKind::Newline)||check(TokenKind::Dedent)||check(TokenKind::End))throw Error(name.pos,"CSS property '"+name.text+"' needs a value.");
+  item.values.push_back(expression());
+  line_end();
+  return item;
+}
+
+std::vector<ast::WebCssItem> Parser::web_css_items(){
+  take(TokenKind::Newline,"Start CSS on the next line.");
+  take(TokenKind::Indent,"Indent CSS under css or style.");
+  std::vector<ast::WebCssItem> items;
+  while(!check(TokenKind::Dedent)&&!check(TokenKind::End)){if(match(TokenKind::Newline))continue;items.push_back(web_css_item());}
+  take(TokenKind::Dedent,"This CSS block was not closed correctly.");
+  return items;
+}
+
+ast::StmtPtr Parser::web_section(SourcePos start,const std::string& kind){
+  auto section=std::make_shared<ast::WebSection>(start,kind);
+  if(kind=="html"){
+    section->elements=web_elements();
+    return section;
+  }
+  if(kind=="css"||kind=="style"){
+    section->css=web_css_items();
+    return section;
+  }
+  take(TokenKind::Newline,"Start JavaScript behavior on the next line.");
+  take(TokenKind::Indent,"Indent JavaScript behavior under js.");
+  while(!check(TokenKind::Dedent)&&!check(TokenKind::End)){
+    if(match(TokenKind::Newline))continue;
+    Token item=peek();
+    if(identifier("when")){
+      ++at_;
+      std::string event;
+      if(check(TokenKind::Identifier)||check(TokenKind::String))event=tokens_[at_++].text;
+      else throw Error(peek().pos,"Write an event after when, like when click.");
+      auto body=block();
+      section->events.push_back({item.pos,std::move(event),std::move(body)});
+      continue;
+    }
+    if(identifier("native")){
+      ++at_;
+      section->native.push_back(expression());
+      line_end();
+      continue;
+    }
+    throw Error(item.pos,"Inside js, use 'when event' for behavior or 'native \"...\"' as an escape hatch.");
+  }
+  take(TokenKind::Dedent,"This js block was not closed correctly.");
+  return section;
+}
+
+ast::StmtPtr Parser::if_statement(SourcePos start){
+  auto condition=expression();
+  auto yes=block();
+  ast::Block no;
+  if(match(TokenKind::Else)){
+    if(match(TokenKind::If)) no.push_back(if_statement(peek(-1).pos));
+    else no=block();
+  }
+  return std::make_shared<ast::If>(start,condition,std::move(yes),std::move(no));
+}
+
 ast::StmtPtr Parser::statement(){
   Token start=peek();
+  if(check(TokenKind::Identifier)&&(peek().text=="html"||peek().text=="css"||peek().text=="js"||peek().text=="style")&&peek(1).kind==TokenKind::Newline){
+    std::string kind=peek().text;++at_;return web_section(start.pos,kind);
+  }
+  if(identifier("page")){
+    std::size_t end=at_;
+    while(end<tokens_.size()&&tokens_[end].kind!=TokenKind::Newline&&tokens_[end].kind!=TokenKind::End)++end;
+    if(end<tokens_.size()&&tokens_[end].kind==TokenKind::Newline&&end+1<tokens_.size()&&tokens_[end+1].kind==TokenKind::Indent){
+      ++at_;
+      auto route=expression();
+      auto body=block();
+      return std::make_shared<ast::Page>(start.pos,std::move(route),std::move(body));
+    }
+  }
   if(match(TokenKind::Say)){ auto e=expression(); line_end(); return std::make_shared<ast::Say>(start.pos,e); }
   if(match(TokenKind::Use)){ auto n=take(TokenKind::Identifier,"Write a module name after 'use'."); line_end(); return std::make_shared<ast::Use>(start.pos,n.text); }
   if(match(TokenKind::Type)) return type_decl(start.pos);
@@ -115,11 +273,7 @@ ast::StmtPtr Parser::statement(){
     take(TokenKind::Dedent,"This match block was not closed correctly.");
     return std::make_shared<ast::Match>(start.pos,value,std::move(cases),std::move(fallback));
   }
-  if(match(TokenKind::If)){
-    auto c=expression(); auto yes=block(); ast::Block no;
-    if(match(TokenKind::Else)) no=block();
-    return std::make_shared<ast::If>(start.pos,c,std::move(yes),std::move(no));
-  }
+  if(match(TokenKind::If)) return if_statement(start.pos);
   if(match(TokenKind::Try)){
     if(check(TokenKind::Newline)){
       auto body=block(); take(TokenKind::Else,"A try block needs 'else' to handle an error.");
@@ -145,6 +299,17 @@ ast::StmtPtr Parser::statement(){
     auto value=expression(); ast::Block init;
     if(check(TokenKind::Newline)&&peek(1).kind==TokenKind::Indent) init=block(); else line_end();
     return std::make_shared<ast::Assign>(start.pos,left,value,std::move(init));
+  }
+  TokenKind binary=TokenKind::End;
+  if(match(TokenKind::PlusEqual)) binary=TokenKind::Plus;
+  else if(match(TokenKind::MinusEqual)) binary=TokenKind::Minus;
+  else if(match(TokenKind::StarEqual)) binary=TokenKind::Star;
+  else if(match(TokenKind::SlashEqual)) binary=TokenKind::Slash;
+  else if(match(TokenKind::PercentEqual)) binary=TokenKind::Percent;
+  if(binary!=TokenKind::End){
+    auto value=expression(); line_end();
+    auto combined=std::make_shared<ast::Binary>(start.pos,left,binary,value);
+    return std::make_shared<ast::Assign>(start.pos,left,std::move(combined));
   }
   line_end(); return std::make_shared<ast::ExprStmt>(start.pos,left);
 }
@@ -175,7 +340,15 @@ ast::ExprPtr Parser::expression(int min_prec){
 
 std::vector<ast::ExprPtr> Parser::bracket_items(TokenKind close){
   std::vector<ast::ExprPtr> items;
-  if(!check(close)) do { items.push_back(expression()); } while(match(TokenKind::Comma));
+  while(match(TokenKind::Newline)||match(TokenKind::Indent)||match(TokenKind::Dedent)){}
+  if(!check(close)){
+    do {
+      while(match(TokenKind::Newline)||match(TokenKind::Indent)||match(TokenKind::Dedent)){}
+      items.push_back(expression());
+      while(match(TokenKind::Newline)||match(TokenKind::Indent)||match(TokenKind::Dedent)){}
+    } while(match(TokenKind::Comma));
+  }
+  while(match(TokenKind::Newline)||match(TokenKind::Indent)||match(TokenKind::Dedent)){}
   take(close,"Close this collection with ']'."); return items;
 }
 
@@ -201,18 +374,40 @@ ast::ExprPtr Parser::prefix(){
   }
   if(match(TokenKind::Map)){
     take(TokenKind::LeftBracket,"Write map entries inside '[' and ']'."); std::vector<std::pair<ast::ExprPtr,ast::ExprPtr>> items;
-    if(!check(TokenKind::RightBracket)) do { auto k=expression(); take(TokenKind::Colon,"Separate a map key and value with ':'."); auto v=expression(); items.emplace_back(k,v); } while(match(TokenKind::Comma));
+    while(match(TokenKind::Newline)||match(TokenKind::Indent)||match(TokenKind::Dedent)){}
+    if(!check(TokenKind::RightBracket)){
+      do {
+        while(match(TokenKind::Newline)||match(TokenKind::Indent)||match(TokenKind::Dedent)){}
+        auto k=expression(); take(TokenKind::Colon,"Separate a map key and value with ':'."); auto v=expression(); items.emplace_back(k,v);
+        while(match(TokenKind::Newline)||match(TokenKind::Indent)||match(TokenKind::Dedent)){}
+      } while(match(TokenKind::Comma));
+    }
+    while(match(TokenKind::Newline)||match(TokenKind::Indent)||match(TokenKind::Dedent)){}
     take(TokenKind::RightBracket,"Close this map with ']'."); return std::make_shared<ast::Map>(t.pos,std::move(items));
   }
   if(match(TokenKind::LeftBracket)){
+    while(match(TokenKind::Newline)||match(TokenKind::Indent)||match(TokenKind::Dedent)){}
     if(check(TokenKind::RightBracket)){++at_;return std::make_shared<ast::List>(t.pos,std::vector<ast::ExprPtr>{});}
     auto first=expression();
     if(match(TokenKind::Colon)){
-      std::vector<std::pair<ast::ExprPtr,ast::ExprPtr>> items; items.emplace_back(first,expression());
-      while(match(TokenKind::Comma)){ auto k=expression(); take(TokenKind::Colon,"Separate a map key and value with ':'."); items.emplace_back(k,expression()); }
-      take(TokenKind::RightBracket,"Close this map with ']'."); return std::make_shared<ast::Map>(t.pos,std::move(items));
+      std::vector<std::pair<ast::ExprPtr,ast::ExprPtr>> items;items.emplace_back(first,expression());
+      while(true){
+        while(match(TokenKind::Newline)||match(TokenKind::Indent)||match(TokenKind::Dedent)){}
+        if(!match(TokenKind::Comma))break;
+        while(match(TokenKind::Newline)||match(TokenKind::Indent)||match(TokenKind::Dedent)){}
+        auto k=expression();take(TokenKind::Colon,"Separate a map key and value with ':'.");items.emplace_back(k,expression());
+      }
+      while(match(TokenKind::Newline)||match(TokenKind::Indent)||match(TokenKind::Dedent)){}
+      take(TokenKind::RightBracket,"Close this map with ']'.");return std::make_shared<ast::Map>(t.pos,std::move(items));
     }
-    std::vector<ast::ExprPtr> items{first}; while(match(TokenKind::Comma)) items.push_back(expression());
+    std::vector<ast::ExprPtr> items{first};
+    while(true){
+      while(match(TokenKind::Newline)||match(TokenKind::Indent)||match(TokenKind::Dedent)){}
+      if(!match(TokenKind::Comma))break;
+      while(match(TokenKind::Newline)||match(TokenKind::Indent)||match(TokenKind::Dedent)){}
+      items.push_back(expression());
+    }
+    while(match(TokenKind::Newline)||match(TokenKind::Indent)||match(TokenKind::Dedent)){}
     take(TokenKind::RightBracket,"Close this list with ']'."); return std::make_shared<ast::List>(t.pos,std::move(items));
   }
   throw Error(t.pos,"I expected a value here.");
@@ -231,7 +426,12 @@ ast::ExprPtr Parser::postfix(ast::ExprPtr value){
         take(TokenKind::RightBracket,"Close type arguments with ']'.");
         continue;
       }
-      if(match(TokenKind::LeftBracket)){auto i=expression();take(TokenKind::RightBracket,"Close this index with ']'.");arg=std::make_shared<ast::Index>(arg->pos,arg,i);continue;}
+      // A following '[' after a literal argument is another low-punctuation
+      // function argument, not an index. Indexing remains available for names
+      // and member/index expressions, which covers SE's ordinary collection use.
+      if(check(TokenKind::LeftBracket)&&(std::dynamic_pointer_cast<ast::Variable>(arg)||std::dynamic_pointer_cast<ast::Member>(arg)||std::dynamic_pointer_cast<ast::Index>(arg))){
+        ++at_;auto i=expression();take(TokenKind::RightBracket,"Close this index with ']'.");arg=std::make_shared<ast::Index>(arg->pos,arg,i);continue;
+      }
       if(match(TokenKind::Dot)){auto n=take_member_name();arg=std::make_shared<ast::Member>(arg->pos,arg,n.text);continue;}
       break;
     }
