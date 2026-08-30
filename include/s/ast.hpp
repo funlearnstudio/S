@@ -27,7 +27,11 @@ struct TypeRef {
 
 struct Literal final : Expr { using Data=std::variant<std::int64_t,double,std::string,bool>; Literal(SourcePos p,Data v):Expr(p),value(std::move(v)){} Data value; };
 struct Duration final : Expr { Duration(SourcePos p,std::int64_t ms):Expr(p),milliseconds(ms){} std::int64_t milliseconds; };
-struct Variable final : Expr { Variable(SourcePos p,std::string n):Expr(p),name(std::move(n)){} std::string name; };
+struct Variable final : Expr {
+  Variable(SourcePos p,std::string n,std::vector<TypeRef> ta={}):Expr(p),name(std::move(n)),type_args(std::move(ta)){}
+  std::string name;
+  std::vector<TypeRef> type_args;
+};
 struct Binary final : Expr { Binary(SourcePos p,ExprPtr l,TokenKind o,ExprPtr r):Expr(p),left(std::move(l)),op(o),right(std::move(r)){} ExprPtr left; TokenKind op; ExprPtr right; };
 struct Unary final : Expr { Unary(SourcePos p,TokenKind o,ExprPtr v):Expr(p),op(o),value(std::move(v)){} TokenKind op; ExprPtr value; };
 struct List final : Expr { List(SourcePos p,std::vector<ExprPtr> v):Expr(p),items(std::move(v)){} std::vector<ExprPtr> items; };
@@ -58,8 +62,21 @@ struct Function final : Stmt {
   TypeRef result_type;
 };
 struct Give final : Stmt { Give(SourcePos p,ExprPtr v):Stmt(p),value(std::move(v)){} ExprPtr value; };
-struct FieldDecl { SourcePos pos; std::string name; ExprPtr value; };
-struct Type final : Stmt { Type(SourcePos p,std::string n,std::vector<FieldDecl> f,std::vector<std::shared_ptr<Function>> m):Stmt(p),name(std::move(n)),fields(std::move(f)),methods(std::move(m)){} std::string name; std::vector<FieldDecl> fields; std::vector<std::shared_ptr<Function>> methods; };
+struct FieldDecl {
+  SourcePos pos;
+  std::string name;
+  ExprPtr value;
+  TypeRef type;
+  bool has_default=true;
+};
+struct Type final : Stmt {
+  Type(SourcePos p,std::string n,std::vector<FieldDecl> f,std::vector<std::shared_ptr<Function>> m,std::vector<std::string> g={})
+      :Stmt(p),name(std::move(n)),fields(std::move(f)),methods(std::move(m)),generic_params(std::move(g)){}
+  std::string name;
+  std::vector<FieldDecl> fields;
+  std::vector<std::shared_ptr<Function>> methods;
+  std::vector<std::string> generic_params;
+};
 struct Use final : Stmt { Use(SourcePos p,std::string n):Stmt(p),name(std::move(n)){} std::string name; };
 struct Try final : Stmt { Try(SourcePos p,Block b,std::string n,Block e):Stmt(p),body(std::move(b)),error_name(std::move(n)),else_block(std::move(e)){} Block body; std::string error_name; Block else_block; };
 struct Fail final : Stmt { Fail(SourcePos p,ExprPtr v):Stmt(p),value(std::move(v)){} ExprPtr value; };
