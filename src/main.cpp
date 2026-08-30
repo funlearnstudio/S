@@ -6,6 +6,7 @@
 #include "s/lexer.hpp"
 #include "s/modules.hpp"
 #include "s/parser.hpp"
+#include "s/web_compiler.hpp"
 #include <algorithm>
 #include <cstdlib>
 #include <filesystem>
@@ -40,6 +41,13 @@ void write_new_file(const std::filesystem::path&path,const std::string&content){
   out<<content;
 }
 
+void write_output_file(const std::filesystem::path&path,const std::string&content){
+  if(!path.parent_path().empty())std::filesystem::create_directories(path.parent_path());
+  std::ofstream out(path,std::ios::binary|std::ios::trunc);
+  if(!out)throw std::runtime_error("Could not write "+path.string());
+  out<<content;
+}
+
 void print_help(){
   std::cout<<
     "SE - simple at every level\n\n"
@@ -49,6 +57,7 @@ void print_help(){
     "  se check-all [path]            Check every .se file in a project\n"
     "  se test [path]                 Run *_test.se files recursively\n"
     "  se build file.se               Build a native executable\n"
+    "  se web build file.se [dist]    Compile one SE browser file to HTML/CSS/JS/TS\n"
     "  se bind module.sbind [dir]     Generate C ABI bindings\n"
     "  se new app NAME                Create a normal SE application\n"
     "  se new web NAME                Create an SE web/API + HTML/CSS/JS/TS project\n"
@@ -76,6 +85,7 @@ int doctor_command(){
   if(const char*home=std::getenv("SE_HOME"))std::cout<<"  SE_HOME: "<<home<<"\n";
   else if(const char*legacy=std::getenv("S_HOME"))std::cout<<"  S_HOME: "<<legacy<<" (legacy)\n";
   else std::cout<<"  package home: default search paths\n";
+  std::cout<<"  Browser web build: built into SE; generated sites need only a browser/static host\n";
   std::cout<<"  Node bridge: requires node on PATH for use js\n";
   std::cout<<"  TypeScript bridge: requires ts-node/tsc on PATH for use ts\n";
   std::cout<<"  HTTPS bridge: requires curl on PATH for use https\n";
@@ -126,6 +136,22 @@ int test_command(const std::filesystem::path&root){
   return failed?1:0;
 }
 
+int web_build_command(const std::filesystem::path&source_path,const std::filesystem::path&output){
+  auto source=read_file(source_path);
+  try{
+    s::Lexer lexer(source);s::Parser parser(lexer.scan());auto program=parser.parse();
+    auto bundle=s::WebCompiler{}.generate(program);
+    std::filesystem::create_directories(output);
+    write_output_file(output/"index.html",bundle.html);
+    write_output_file(output/"style.css",bundle.css);
+    write_output_file(output/"app.js",bundle.js);
+    write_output_file(output/"app.ts",bundle.ts);
+    std::cout<<"Built SE website in "<<output.string()<<"\n";
+    std::cout<<"  index.html\n  style.css\n  app.js\n  app.ts\n";
+    return 0;
+  }catch(const s::Error&e){std::cerr<<s::format_error(e,source);return 1;}
+}
+
 int new_project(const std::string&kind,const std::filesystem::path&root){
   if(root.empty())throw std::runtime_error("Project name cannot be empty.");
   if(std::filesystem::exists(root))throw std::runtime_error("Project path already exists: "+root.string());
@@ -166,32 +192,24 @@ int new_project(const std::string&kind,const std::filesystem::path&root){
       "test.equal status 200\n"
       "has_name = body != \"\"\n"
       "test.ok has_name\n");
-    write_new_file(root/"frontend/index.html",
-      "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n  <title>SE Web</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <main>\n    <h1>SE Web</h1>\n    <button id=\"hello\">Call SE backend</button>\n    <pre id=\"output\"></pre>\n  </main>\n  <script type=\"module\" src=\"./app.js\"></script>\n</body>\n</html>\n");
-    write_new_file(root/"frontend/style.css","body { font-family: system-ui, sans-serif; margin: 2rem; }\nbutton { padding: .6rem 1rem; }\npre { margin-top: 1rem; }\n");
-    write_new_file(root/"frontend/se-api.js",
-      "const SE_API = 'http://localhost:8080';\n\n"
-      "async function decode(response) {\n  if (!response.ok) throw new Error(`SE API ${response.status}`);\n  const type = response.headers.get('content-type') || '';\n  return type.includes('application/json') ? response.json() : response.text();\n}\n\n"
-      "export async function seGet(path) {\n  return decode(await fetch(`${SE_API}${path}`));\n}\n\n"
-      "export async function sePost(path, value) {\n  return decode(await fetch(`${SE_API}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) }));\n}\n");
-    write_new_file(root/"frontend/se-api.ts",
-      "const SE_API: string = 'http://localhost:8080';\n\n"
-      "async function decode(response: Response): Promise<unknown> {\n  if (!response.ok) throw new Error(`SE API ${response.status}`);\n  const type = response.headers.get('content-type') ?? '';\n  return type.includes('application/json') ? response.json() : response.text();\n}\n\n"
-      "export async function seGet(path: string): Promise<unknown> {\n  return decode(await fetch(`${SE_API}${path}`));\n}\n\n"
-      "export async function sePost(path: string, value: unknown): Promise<unknown> {\n  return decode(await fetch(`${SE_API}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) }));\n}\n");
-    write_new_file(root/"frontend/app.js",
-      "import { seGet } from './se-api.js';\n\n"
-      "const output = document.querySelector('#output');\n"
-      "document.querySelector('#hello').addEventListener('click', async () => {\n  try { output.textContent = JSON.stringify(await seGet('/api/hello/browser'), null, 2); }\n  catch (error) { output.textContent = String(error); }\n});\n");
-    write_new_file(root/"frontend/app.ts",
-      "import { seGet } from './se-api';\n\n"
-      "const output = document.querySelector<HTMLPreElement>('#output');\n"
-      "async function load(): Promise<void> {\n  const value: unknown = await seGet('/api/hello/typescript');\n  if (output) output.textContent = JSON.stringify(value, null, 2);\n}\n"
-      "void load();\n");
+    write_new_file(root/"frontend/app.se",
+      "ui.page \"SE Web\"\n\n"
+      "ui.style \"body\" [\"font-family\": \"system-ui, sans-serif\", \"margin\": \"2rem\"]\n"
+      "ui.style \"button\" [\"padding\": \".6rem 1rem\"]\n\n"
+      "root = ui.el \"main\"\n"
+      "title = ui.el \"h1\" \"SE Web\"\n"
+      "button = ui.el \"button\" \"Hello\"\n"
+      "output = ui.el \"pre\" \"Ready\"\n"
+      "ui.add root title\nui.add root button\nui.add root output\n\n"
+      "make clicked event\n"
+      "    ui.text output \"Hello from SE browser code\"\n\n"
+      "ui.on button \"click\" clicked\n"
+      "ui.mount root\n");
     write_new_file(root/"README.md",
-      "# "+root.filename().string()+"\n\nSE 0.6 web project with a real SE HTTP API backend and browser bridge.\n\n- `backend/main.se` - SE HTTP server/router\n- `backend/tests/` - in-memory route tests\n- `frontend/index.html` / `style.css` - browser UI\n- `frontend/se-api.js` - JavaScript fetch bridge\n- `frontend/se-api.ts` - typed TypeScript fetch bridge\n\nRun backend:\n\n```sh\nse check-all backend\nse test backend\nse run backend/main.se\n```\n\nThen serve `frontend/` with any static web server and open it in a browser. The SE server listens on port 8080.\n\nThe built-in server is synchronous and intended for development/small services. Use `https` for TLS client requests; it currently relies on system curl.\n");
+      "# "+root.filename().string()+"\n\nSE web project with an SE backend and a browser frontend authored in SE.\n\n- `backend/main.se` - SE HTTP server/router\n- `backend/tests/` - backend route tests\n- `frontend/app.se` - page structure, CSS and browser behavior in SE\n\nBuild frontend:\n\n```sh\nse web build frontend/app.se frontend/dist\n```\n\nThis generates deployable `index.html`, `style.css`, `app.js`, and `app.ts`.\n\nRun backend:\n\n```sh\nse check-all backend\nse test backend\nse run backend/main.se\n```\n\nThe browser compiler is a growing SE subset. Keep database credentials on the backend; do not place MongoDB or other private connection strings in frontend SE files.\n");
     std::cout<<"Created SE web project at "<<root.string()<<"\n";
-    std::cout<<"Run: cd "<<root.string()<<" && se test backend && se run backend/main.se\n";
+    std::cout<<"Frontend: cd "<<root.string()<<" && se web build frontend/app.se frontend/dist\n";
+    std::cout<<"Backend:  se test backend && se run backend/main.se\n";
     return 0;
   }
   throw std::runtime_error("Unknown project kind '"+kind+"'. Use app or web.");
@@ -239,6 +257,7 @@ int main(int argc,char**argv){
     if((argc==2||argc==3)&&std::string(argv[1])=="check-all")return check_all_command(argc==3?std::filesystem::path(argv[2]):std::filesystem::path("."));
     if((argc==2||argc==3)&&std::string(argv[1])=="test")return test_command(argc==3?std::filesystem::path(argv[2]):std::filesystem::path("."));
     if(argc==4&&std::string(argv[1])=="new")return new_project(argv[2],argv[3]);
+    if((argc==4||argc==5)&&std::string(argv[1])=="web"&&std::string(argv[2])=="build")return web_build_command(argv[3],argc==5?std::filesystem::path(argv[4]):std::filesystem::path("dist"));
     if(argc>=3&&std::string(argv[1])=="bind"){
       if(argc>4){std::cerr<<"Use: se bind module.sbind [output-directory]\n";return 2;}
       std::filesystem::path definition=argv[2];
