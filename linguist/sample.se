@@ -1,0 +1,26 @@
+use random
+
+type Player
+    name = ""
+    hp = 100
+
+    make hit damage
+        hp = hp - damage
+
+make attack player
+    damage = random.int 5 20
+    player.hit damage
+    give damage
+
+player = Player
+player.name = "SE"
+
+while player.hp > 0
+    damage = attack player
+    say player.name + " lost " + string damage + " HP"
+
+match player.hp
+    case 0
+        say "Game over"
+    else
+        say "Finished"
