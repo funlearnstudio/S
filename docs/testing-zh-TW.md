@@ -1,79 +1,65 @@
-# 測試系統
+# SE 測試與專案檢查
 
-本文件是 `testing.md` 的繁體中文版。
+[English version](testing.md)
 
-SE 內建專案測試流程，不需要先安裝第三方測試框架。
+SE 提供 project-wide static checking 與輕量 test runner，讓大型專案不需要一個檔案一個檔案手動驗證。
 
-## 測試檔命名
-
-`se test` 會遞迴尋找：
-
-```text
-*_test.se
-*_test.s
-```
-
-新的測試建議使用 `.se`。
-
-## test module
-
-```se
-use test
-
-test.ok true
-test.equal 2 + 2 4
-test.not_equal 1 2
-```
-
-也可以主動失敗：
-
-```se
-test.fail "not implemented"
-```
-
-Assertion failure 會以 `AssertionError` 結束該測試。
-
-## 執行測試
+## 檢查單一檔案
 
 ```bash
-se test .
+se check app.se
 ```
 
-或指定資料夾：
-
-```bash
-se test backend
-```
-
-測試流程會先做 static check，再執行測試程式。
-
-## 全專案檢查
+## 檢查整個 Source Tree
 
 ```bash
 se check-all .
 ```
 
-`check-all` 會檢查找到的 SE source，適合在 commit 或 CI 前快速驗證整個專案。
+也可以只檢查子目錄：
 
-## Web route 測試
-
-Web router 可以不真的開 port 就測試：
-
-```se
-use web
-use test
-
-make home body
-    give "hello"
-
-web.get "/" home
-body = web.handle "GET" "/" ""
-status = web.handle_status "GET" "/" ""
-
-test.equal body "hello"
-test.equal status 200
+```bash
+se check-all backend
 ```
 
-## 專案內部測試
+指令會遞迴尋找 SE source、略過常見 generated/dependency directory、輸出 pass/fail，並在失敗時回傳 non-zero exit code，因此可用在 CI。
 
-SE 本身使用 CTest、CLI tests、interpreter/native parity、FFI Bytes、bindgen、generics 與 advanced native smoke tests 驗證 compiler/runtime 行為。跨平台 CI 目前涵蓋 Ubuntu、macOS、Windows。
+## Test File
+
+Test file 慣例使用 `_test.se`：
+
+```se
+use test
+
+test.equal 4 2 + 2
+test.ok true
+```
+
+簡單測試也可以在條件錯誤時直接使用 `fail`。
+
+## 執行 Tests
+
+```bash
+se test .
+```
+
+Test runner 會遞迴找 test file、檢查並執行、輸出 summary；任一 test 失敗時回傳 non-zero exit code。
+
+## Project Scaffolding
+
+`se new app NAME` 會建立包含 source/test 的 application structure；`se new web NAME` 建立目前 CLI 支援的 Web/project scaffold。
+
+## Compiler Regression Tests
+
+SE implementation 本身另外使用 CMake / CTest 做較底層 regression：
+
+```bash
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure
+```
+
+Implementation-level coverage 包含 Lexer/Parser/Checker、Interpreter、Native backend parity、Native ABI/Bytes/resource lifetime、Web build 與 CLI smoke test。
+
+## CI 原則
+
+Compiler 能成功 build 不代表語言變更就已驗證。Language change 應加入對應 regression test，證明預期的 SE behavior 真的能工作。
