@@ -1,17 +1,17 @@
-# 模組系統
+# SE 模組系統
 
-本文件是 `modules.md` 的繁體中文版。
+[English version](modules.md)
 
-SE 使用 `use` 載入模組。
+SE 使用 `use` 透過同一套 module system 載入 source、standard、package 或 native module。
+
+## 基本 Import
 
 ```se
 use math
 say math.sqrt 25
 ```
 
-## 本機模組
-
-假設：
+本機 source：
 
 ```text
 app/
@@ -25,28 +25,53 @@ app/
 use tools
 ```
 
-Module loader 會解析本機來源檔、標準模組與套件搜尋路徑。
+## Resolution
 
-## 私有名稱
+Loader 會依專案 source 位置、built-in/standard module、package search path 與需要時的 native metadata 解析 module。新設定優先使用 `SE_HOME`；migration 期間可保留舊 `S_HOME` fallback。
 
-以下劃線開頭的名稱採 private convention：
+## Public / Private 名稱
+
+Top-level 名稱以 `_` 開頭時採 private convention：
 
 ```se
 _secret = 123
 ```
 
-它用來表示模組內部實作，不應作為公開 API。
+其他公開 top-level function、type 與 assigned name 可由 module 匯出。若不同 import 造成公開名稱 collision，應回報錯誤，而不是靜默挑一個。
 
-## 依賴圖
+## Dependency Graph
 
-Loader 會建立 module dependency graph，並偵測 circular import。循環相依會回報錯誤，而不是無限載入。
+Loader 會在 execution 或 native code generation 前建立完整 dependency graph。Circular import：
 
-## 標準 / Built-in modules
+```text
+a → b → a
+```
 
-目前包含或可使用的模組包含 `file`、`path`、`time`、`math`、`random`、`os`、`json`、`text`、`collections`、`test`、`process`、`http`、`web`、`js`、`ts`，以及 SE 0.6 的 `function`、`async`、`option`、`result`、`match`、`db`、`https`。
+會連同 dependency chain 一起被拒絕。
 
-## 套件搜尋
+## Standard / Platform Modules
 
-SE 優先使用 `SE_HOME/packages`，並保留舊的 `S_HOME/packages` fallback。
+可用 built-in/runtime module 會依目前 revision 而異，主要包含：
 
-模組系統的方向是：使用簡單的 `use name`，讓路徑解析、循環偵測與 API 邊界由 loader 處理。
+```text
+file path time math random os
+json text collections test process
+http web js ts
+function async option result match db https
+```
+
+每個 module 的精確 member 以對應 Reference / API 文件為準。
+
+## Native Modules
+
+Native module 仍用普通 `use`：
+
+```se
+use native_test
+```
+
+外部 `.snative` metadata 負責描述 C ABI，因此一般 SE source 不需要塞 ABI detail。
+
+## Source Extension
+
+新的 module 使用 `.se`。舊 `.s` lookup 可暫時保留 migration compatibility，但新專案與文件應一律使用 `.se`。
