@@ -1,6 +1,7 @@
 #include "s/parser.hpp"
 #include "s/error.hpp"
 #include <algorithm>
+#include <cctype>
 
 namespace s {
 
@@ -56,6 +57,12 @@ std::shared_ptr<ast::Function> Parser::function(SourcePos start){
 
 std::shared_ptr<ast::Type> Parser::type_decl(SourcePos start){
   auto name=take(TokenKind::Identifier,"Give this type a name.");
+  std::vector<std::string> generics;
+  if(match(TokenKind::LeftBracket)){
+    if(check(TokenKind::RightBracket)) throw Error(peek().pos,"A generic type needs at least one type name.");
+    do { generics.push_back(take(TokenKind::Identifier,"Write a generic type name.").text); } while(match(TokenKind::Comma));
+    take(TokenKind::RightBracket,"Close generic type names with ']'.");
+  }
   take(TokenKind::Newline,"Start the type on the next line.");
   take(TokenKind::Indent,"Indent the fields and methods inside this type.");
   std::vector<ast::FieldDecl> fields; std::vector<std::shared_ptr<ast::Function>> methods;
@@ -64,11 +71,18 @@ std::shared_ptr<ast::Type> Parser::type_decl(SourcePos start){
     Token item=peek();
     if(match(TokenKind::Make)){ methods.push_back(function(item.pos)); continue; }
     auto field=take(TokenKind::Identifier,"Inside a type, write a field or a make method.");
-    take(TokenKind::Equal,"Give this field a default value with '='.");
-    auto value=expression(); line_end(); fields.push_back({field.pos,field.text,std::move(value)});
+    ast::TypeRef annotation;
+    if(match(TokenKind::Colon)) annotation=type_ref();
+    bool has_default=false;
+    ast::ExprPtr value;
+    if(match(TokenKind::Equal)){ value=expression(); has_default=true; }
+    else if(annotation.empty()) throw Error(peek().pos,"Give this field a default value with '=', or write its type with ':'.");
+    else value=std::make_shared<ast::Literal>(field.pos,std::string{});
+    line_end();
+    fields.push_back({field.pos,field.text,std::move(value),std::move(annotation),has_default});
   }
   take(TokenKind::Dedent,"This type was not closed correctly.");
-  return std::make_shared<ast::Type>(start,name.text,std::move(fields),std::move(methods));
+  return std::make_shared<ast::Type>(start,name.text,std::move(fields),std::move(methods),std::move(generics));
 }
 
 ast::StmtPtr Parser::statement(){
@@ -211,6 +225,12 @@ ast::ExprPtr Parser::postfix(ast::ExprPtr value){
   };
   auto attach_members=[&](ast::ExprPtr arg){
     while(true){
+      if(auto variable=std::dynamic_pointer_cast<ast::Variable>(arg);variable&&variable->type_args.empty()&&!variable->name.empty()&&std::isupper(static_cast<unsigned char>(variable->name.front()))&&match(TokenKind::LeftBracket)){
+        if(check(TokenKind::RightBracket)) throw Error(peek().pos,"A generic type needs at least one type argument.");
+        do { variable->type_args.push_back(type_ref()); } while(match(TokenKind::Comma));
+        take(TokenKind::RightBracket,"Close type arguments with ']'.");
+        continue;
+      }
       if(match(TokenKind::LeftBracket)){auto i=expression();take(TokenKind::RightBracket,"Close this index with ']'.");arg=std::make_shared<ast::Index>(arg->pos,arg,i);continue;}
       if(match(TokenKind::Dot)){auto n=take_member_name();arg=std::make_shared<ast::Member>(arg->pos,arg,n.text);continue;}
       break;
