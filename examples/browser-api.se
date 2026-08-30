@@ -1,34 +1,221 @@
-# SE Web browser API stress test
-# Single-file Web App that exercises success, HTTP errors, timeout,
-# retries, offline detection, JSON/text parsing, cancellation and duplicate requests.
+# SE Web browser API + routing stress test
+# No native JavaScript is needed for requests, navigation, JSON sending,
+# retries, timeout handling, cancellation, DOM updates or form collection.
 
-make ApiDemo title
+make NavButton label route
     html
-        main
-            h1 title
-            p "A single-file SE Web API stress test."
-            button "Run API test"
+        button ["type": "button"]
+            text label
 
     css
-        padding 32
-        max_width 900
-        margin 24
-
-        h1
-            font_size 36
-
-        button
-            padding 14
-            border_radius 10
+        padding 10
+        border_radius 8
+        margin 4
 
         button:hover
             opacity 0.8
 
     js
-        native "const browser=(()=>{const active=new Map();const sleep=ms=>new Promise(r=>setTimeout(r,ms));class ApiError extends Error{constructor(kind,message,info={}){super(message);this.name='ApiError';this.kind=kind;Object.assign(this,info)}}async function request(url,options={}){const method=(options.method||'GET').toUpperCase();const timeout=options.timeout??10000;const retries=Math.max(0,options.retries??0);const retryDelay=options.retryDelay??400;const key=options.key||method+':'+url;if(options.dedupe!==false&&active.has(key))return active.get(key);const task=(async()=>{let lastError;for(let attempt=0;attempt<=retries;attempt++){if(typeof navigator!=='undefined'&&!navigator.onLine)throw new ApiError('offline','The browser is offline',{url,method});const controller=new AbortController();const timer=setTimeout(()=>controller.abort('timeout'),timeout);try{const headers=new Headers(options.headers||{});let body=options.body;if(options.json!==undefined){headers.set('Content-Type','application/json');body=JSON.stringify(options.json)}const response=await fetch(url,{method,headers,body,credentials:options.credentials||'same-origin',signal:controller.signal,cache:options.cache||'no-store'});clearTimeout(timer);const type=response.headers.get('content-type')||'';let data=null;if(response.status!==204){const text=await response.text();if(text){if(type.includes('json')){try{data=JSON.parse(text)}catch(e){throw new ApiError('parse','Invalid JSON response',{status:response.status,url,method,cause:e})}}else data=text}}if(!response.ok){const err=new ApiError('http','HTTP '+response.status,{status:response.status,data,url,method,retryAfter:response.headers.get('retry-after')});if((response.status===429||response.status>=500)&&attempt<retries){lastError=err;const wait=err.retryAfter&&!Number.isNaN(Number(err.retryAfter))?Number(err.retryAfter)*1000:retryDelay*Math.pow(2,attempt);await sleep(wait);continue}throw err}return{ok:true,status:response.status,data,headers:response.headers,url:response.url}}catch(error){clearTimeout(timer);if(error instanceof ApiError){lastError=error;if((error.kind==='offline'||error.kind==='parse')||attempt>=retries)throw error}else{const kind=controller.signal.aborted?'timeout':'network';lastError=new ApiError(kind,kind==='timeout'?'Request timed out':'Network request failed',{url,method,cause:error});if(attempt>=retries)throw lastError}await sleep(retryDelay*Math.pow(2,attempt))}}throw lastError})();active.set(key,task);try{return await task}finally{if(active.get(key)===task)active.delete(key)}}function cancel(key){const item=active.get(key);return Boolean(item)}return{request,get:(url,o={})=>request(url,{...o,method:'GET'}),post:(url,body,o={})=>request(url,{...o,method:'POST',body}),post_json:(url,json,o={})=>request(url,{...o,method:'POST',json}),put_json:(url,json,o={})=>request(url,{...o,method:'PUT',json}),patch_json:(url,json,o={})=>request(url,{...o,method:'PATCH',json}),delete:(url,o={})=>request(url,{...o,method:'DELETE'}),cancel,ApiError}})(); async function runSeApiTest(){const root=event.currentTarget.closest('[data-se-instance]');const button=root.querySelector('button');button.disabled=true;button.textContent='Loading...';try{const result=await browser.get('https://jsonplaceholder.typicode.com/todos/1',{timeout:8000,retries:2,key:'demo'});console.log('SE API success',result.status,result.data);button.textContent='Success: '+result.status}catch(err){console.error('SE API error',err.kind,err.status||'',err.message);button.textContent='Error: '+err.kind}finally{button.disabled=false}}"
-
         when click
-            runSeApiTest
+            browser.go route
+
+make Heading title subtitle
+    html
+        header
+            h1 title
+            p subtitle
+
+    css
+        padding 24
+
+        h1
+            font_size 36
+
+make Output id text_value
+    html
+        pre ["id": id]
+            text text_value
+
+    css
+        padding 16
+        border_radius 10
+        background "#f4f4f5"
+        min_height 90
+
+make LoadTodo
+    html
+        button ["type": "button"]
+            text "GET JSON API"
+
+    css
+        padding 12
+        border_radius 8
+
+    js
+        when click
+            browser.text "#api-output" "Loading GET request..."
+            try
+                task = browser.get_json "https://jsonplaceholder.typicode.com/todos/1" ["timeout": 8000, "retries": 2, "key": "todo", "throw_http": true]
+                result = async.await task
+                pretty = browser.pretty result.data
+                browser.text "#api-output" pretty
+            else err
+                browser.text "#api-output" err.message
+
+make SendPost
+    html
+        button ["type": "button"]
+            text "POST JSON"
+
+    css
+        padding 12
+        border_radius 8
+
+    js
+        when click
+            browser.text "#api-output" "Sending JSON..."
+            payload = ["title": "Hello from SE", "body": "Sent by the SE browser runtime", "userId": 1]
+            options = ["timeout": 8000, "retries": 1, "throw_http": true]
+            try
+                task = browser.post_json "https://jsonplaceholder.typicode.com/posts" payload options
+                result = async.await task
+                pretty = browser.pretty result.data
+                browser.text "#api-output" pretty
+            else err
+                browser.text "#api-output" err.message
+
+make TestError
+    html
+        button ["type": "button"]
+            text "Test HTTP Error"
+
+    css
+        padding 12
+        border_radius 8
+
+    js
+        when click
+            browser.text "#api-output" "Requesting a missing resource..."
+            try
+                task = browser.get "https://jsonplaceholder.typicode.com/does-not-exist" ["timeout": 5000, "throw_http": true]
+                result = async.await task
+                browser.text "#api-output" result.text
+            else err
+                browser.text "#api-output" err.message
+
+make StartSlowRequest
+    html
+        button ["type": "button"]
+            text "Start slow request"
+
+    css
+        padding 12
+        border_radius 8
+
+    js
+        when click
+            browser.text "#api-output" "Slow request started. Press Cancel request before it finishes."
+            try
+                task = browser.get "https://httpbin.org/delay/10" ["timeout": 15000, "key": "slow-request", "dedupe": true, "throw_http": true]
+                result = async.await task
+                browser.text "#api-output" result.text
+            else err
+                browser.text "#api-output" err.message
+
+make CancelRequest
+    html
+        button ["type": "button"]
+            text "Cancel request"
+
+    css
+        padding 12
+        border_radius 8
+
+    js
+        when click
+            cancelled = browser.cancel "slow-request"
+            if cancelled
+                browser.text "#api-output" "Cancellation requested."
+            else
+                browser.text "#api-output" "No active request to cancel."
+
+make MessageForm
+    html
+        form ["id": "message-form"]
+            label "Name"
+            input ["name": "name", "placeholder": "Your name"]
+            label "Message"
+            input ["name": "message", "placeholder": "Write a message"]
+
+    css
+        padding 20
+        border_radius 12
+
+        input
+            padding 10
+            margin 6
+
+make SendForm
+    html
+        button ["type": "button"]
+            text "Send form as JSON"
+
+    css
+        padding 12
+        border_radius 8
+
+    js
+        when click
+            data = browser.form_json "#message-form"
+            options = ["timeout": 8000, "retries": 1, "throw_http": true]
+            browser.text "#send-output" "Sending form..."
+            try
+                task = browser.post_json "https://httpbin.org/post" data options
+                result = async.await task
+                pretty = browser.pretty result.data
+                browser.text "#send-output" pretty
+            else err
+                browser.text "#send-output" err.message
+
+make ExternalLink
+    html
+        button ["type": "button"]
+            text "Open external page"
+
+    css
+        padding 12
+        border_radius 8
+
+    js
+        when click
+            browser.open "https://example.com"
 
 page "/"
-    ApiDemo "SE Browser API Stress Test"
+    Heading "SE Web App" "Multi-page navigation, HTTP/HTTPS APIs and data sending from SE."
+    NavButton "API tests" "/api"
+    NavButton "Send data" "/send"
+    NavButton "About" "/about"
+
+page "/api"
+    Heading "API tests" "GET, POST, HTTP errors, retries, timeouts and cancellation."
+    NavButton "Home" "/"
+    NavButton "Send data" "/send"
+    LoadTodo
+    SendPost
+    TestError
+    StartSlowRequest
+    CancelRequest
+    Output "api-output" "Ready."
+
+page "/send"
+    Heading "Send data" "Collect a browser form and send it as JSON."
+    NavButton "Home" "/"
+    NavButton "API tests" "/api"
+    MessageForm
+    SendForm
+    Output "send-output" "Nothing sent yet."
+
+page "/about"
+    Heading "About this test" "Everything on these pages is authored in one SE source file."
+    NavButton "Home" "/"
+    ExternalLink
