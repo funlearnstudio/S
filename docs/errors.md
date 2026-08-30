@@ -1,32 +1,77 @@
-# Errors
+# SE Error Handling
 
-Operations that can fail must be handled or propagated.
+[繁體中文版](errors-zh-TW.md)
 
-```text
+SE separates compile-time/checker errors from recoverable runtime errors.
+
+## try / else
+
+```se
 try
-    text = read "hello.txt"
+    text = read "data.txt"
     say text
 else err
-    say err.kind
-    say err
+    say err.message
 ```
 
-Inside a function, `try expr` propagates a recoverable runtime error to the caller:
+If a recoverable runtime failure occurs inside the `try` block, control moves to `else err`.
+
+## Error values
+
+An error can expose details such as:
 
 ```text
-make load
-    give try read "hello.txt"
+message
+kind
+source
+line
 ```
 
-Create an application error with `fail`:
+Example:
 
-```text
+```se
+say err.message
+say err.kind
+```
+
+## fail
+
+Create an application/runtime error:
+
+```se
 make check score
     if score < 0
         fail "Invalid score"
     give score
 ```
 
-An Error carries a message, source path, line, and kind. `say err` prints the message; `err.message`, `err.source`, `err.line`, and `err.kind` expose details when needed.
+`fail` stops the current flow unless an outer recoverable-error boundary handles it.
 
-File/native failures use this model rather than crashing the interpreter. Static language/type errors remain compiler errors and are not catchable as runtime errors.
+## try expression
+
+Inside supported expression contexts, `try expr` can propagate a recoverable failure:
+
+```se
+make load
+    give try read "data.txt"
+```
+
+The exact expression form depends on the operation being called; use `try` for operations that are defined as fallible.
+
+## Compile-time errors
+
+Syntax errors, unresolved names, incompatible types and other checker failures are compiler errors. They are not ordinary runtime values and cannot be caught by a program-level `try` block.
+
+## Option and Result
+
+Option/Result helpers are useful when absence or success/failure should be represented as ordinary data rather than control-flow failure.
+
+```se
+use result
+
+r = result.err "invalid"
+if result.is_err r
+    say result.error r
+```
+
+Use runtime errors for exceptional/fallible operations and Option/Result when explicit value-level handling makes the API clearer.
