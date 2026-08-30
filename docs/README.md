@@ -70,6 +70,22 @@ A versioned design document is not automatically a promise that every item in it
 - **Current source:** `main` may contain newer compiler/Web work while the reported language version still matches the stable line.
 - **Roadmap/design:** future-stage work is labelled separately from released behavior.
 
+## Documentation organization
+
+The rewrite uses one canonical path for each kind of information:
+
+```text
+Installation → Getting Started → Tutorial → Language Reference
+                                      ↓
+                              topic references
+                                      ↓
+                         Technical / Web / Tooling
+                                      ↓
+                       versioned design / roadmap
+```
+
+Older duplicate guide filenames are kept only as compatibility entry points and redirect readers to the canonical material instead of maintaining another copy of the same tutorial.
+
 ## Documentation rules
 
 1. New user-facing source uses `.se`; legacy `.s` appears only for compatibility/history.
