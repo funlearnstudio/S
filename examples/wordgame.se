@@ -1,0 +1,28 @@
+say "This is a word filling game!"
+
+item = ask "Enter an item: "
+place = ask "Enter a place: "
+adj = ask "Enter an adj. to describe the place: "
+adj2 = ask "Enter another adj. to describe an emotion: "
+adj3 = ask "Enter another adj. to describe a feeling: "
+adj4 = ask "Enter another adj. to describe a day: "
+name = ask "Enter one of your friends name: "
+
+number = int ask "Enter a number (2-1000): "
+
+while number < 2 or number > 1000
+    number = int ask "Please enter a number between 2 and 1000: "
+
+animal = ask "Enter an animal: "
+
+say "You went to a " + place + " to get some " + item + "."
+say "The " + place + " was very " + adj + "."
+say "Your best friend " + name + " was " + adj2 + " by this."
+
+if animal == "fish" or animal == "sheep"
+    say "After a while, you saw " + string number + " " + animal + " chasing after you."
+else
+    say "After a while, you saw " + string number + " " + animal + "s chasing after you."
+
+say "You and your friend " + name + " were really " + adj3 + " and ran away."
+say "It was a " + adj4 + " day."

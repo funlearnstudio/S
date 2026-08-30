@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <random>
 #include <sstream>
 #include <thread>
@@ -28,6 +29,99 @@ double number_value(const Value&v,SourcePos p,const std::string&name){
 std::int64_t int_value(const Value&v,SourcePos p,const std::string&name){
   if(auto n=std::get_if<std::int64_t>(&v.data()))return *n;
   throw Error(p,name+" needs an Int.");
+}
+std::string trim_conversion_text(std::string text){
+  auto ws=[](unsigned char c){return std::isspace(c)!=0;};
+  while(!text.empty()&&ws(static_cast<unsigned char>(text.front())))text.erase(text.begin());
+  while(!text.empty()&&ws(static_cast<unsigned char>(text.back())))text.pop_back();
+  return text;
+}
+bool one_utf8_character(const std::string& text){
+  if(text.empty())return false;
+  const auto first=static_cast<unsigned char>(text[0]);
+  std::size_t size=0;
+  if(first<=0x7f)size=1;
+  else if(first>=0xc2&&first<=0xdf)size=2;
+  else if(first>=0xe0&&first<=0xef)size=3;
+  else if(first>=0xf0&&first<=0xf4)size=4;
+  else return false;
+  if(text.size()!=size)return false;
+  for(std::size_t i=1;i<size;++i)if((static_cast<unsigned char>(text[i])&0xc0)!=0x80)return false;
+  if(size==3){
+    const auto second=static_cast<unsigned char>(text[1]);
+    if(first==0xe0&&second<0xa0)return false;
+    if(first==0xed&&second>=0xa0)return false;
+  }
+  if(size==4){
+    const auto second=static_cast<unsigned char>(text[1]);
+    if(first==0xf0&&second<0x90)return false;
+    if(first==0xf4&&second>0x8f)return false;
+  }
+  return true;
+}
+std::string utf8_from_codepoint(std::int64_t code,SourcePos p){
+  if(code<0||code>0x10ffff||(code>=0xd800&&code<=0xdfff))throw Error(p,"char needs a valid Unicode code point or one-character Text.");
+  std::string out;
+  if(code<=0x7f)out.push_back(static_cast<char>(code));
+  else if(code<=0x7ff){out.push_back(static_cast<char>(0xc0|(code>>6)));out.push_back(static_cast<char>(0x80|(code&0x3f)));}
+  else if(code<=0xffff){out.push_back(static_cast<char>(0xe0|(code>>12)));out.push_back(static_cast<char>(0x80|((code>>6)&0x3f)));out.push_back(static_cast<char>(0x80|(code&0x3f)));}
+  else{out.push_back(static_cast<char>(0xf0|(code>>18)));out.push_back(static_cast<char>(0x80|((code>>12)&0x3f)));out.push_back(static_cast<char>(0x80|((code>>6)&0x3f)));out.push_back(static_cast<char>(0x80|(code&0x3f)));}
+  return out;
+}
+Value convert_int_value(const Value& value,SourcePos p){
+  if(auto n=std::get_if<std::int64_t>(&value.data()))return Value(*n);
+  if(auto n=std::get_if<double>(&value.data())){
+    if(!std::isfinite(*n)||std::trunc(*n)!=*n||*n<static_cast<double>(std::numeric_limits<std::int64_t>::min())||*n>static_cast<double>(std::numeric_limits<std::int64_t>::max()))throw Error(p,"int needs a whole number in Int range.");
+    return Value(static_cast<std::int64_t>(*n));
+  }
+  auto text=std::get_if<std::string>(&value.data());
+  if(!text)throw Error(p,"int needs Text, Int, or a whole Num.");
+  auto cleaned=trim_conversion_text(*text);
+  try{
+    std::size_t used=0;
+    auto parsed=std::stoll(cleaned,&used,10);
+    if(used!=cleaned.size())throw Error(p,"Could not convert '"+*text+"' to Int.");
+    return Value(static_cast<std::int64_t>(parsed));
+  }catch(const Error&){throw;}catch(...){throw Error(p,"Could not convert '"+*text+"' to Int.");}
+}
+Value convert_num_value(const Value& value,SourcePos p){
+  if(auto n=std::get_if<std::int64_t>(&value.data()))return Value(static_cast<double>(*n));
+  if(auto n=std::get_if<double>(&value.data()))return Value(*n);
+  auto text=std::get_if<std::string>(&value.data());
+  if(!text)throw Error(p,"num needs Text, Int, or Num.");
+  auto cleaned=trim_conversion_text(*text);
+  try{
+    std::size_t used=0;
+    auto parsed=std::stod(cleaned,&used);
+    if(used!=cleaned.size()||!std::isfinite(parsed))throw Error(p,"Could not convert '"+*text+"' to Num.");
+    return Value(parsed);
+  }catch(const Error&){throw;}catch(...){throw Error(p,"Could not convert '"+*text+"' to Num.");}
+}
+Value convert_bool_value(const Value& value,SourcePos p){
+  if(auto b=std::get_if<bool>(&value.data()))return Value(*b);
+  auto text=std::get_if<std::string>(&value.data());
+  if(!text)throw Error(p,"bool needs Bool or Text 'true'/'false'.");
+  auto cleaned=trim_conversion_text(*text);
+  std::transform(cleaned.begin(),cleaned.end(),cleaned.begin(),[](unsigned char c){return static_cast<char>(std::tolower(c));});
+  if(cleaned=="true")return Value(true);
+  if(cleaned=="false")return Value(false);
+  throw Error(p,"Could not convert '"+*text+"' to Bool. Use true or false.");
+}
+Value convert_char_value(const Value& value,SourcePos p){
+  if(auto text=std::get_if<std::string>(&value.data())){
+    if(!one_utf8_character(*text))throw Error(p,"char needs exactly one Unicode character.");
+    return Value(*text);
+  }
+  if(auto code=std::get_if<std::int64_t>(&value.data()))return Value(utf8_from_codepoint(*code,p));
+  throw Error(p,"char needs one-character Text or an Int Unicode code point.");
+}
+std::shared_ptr<CallableData> conversion_callable(const std::string& name){
+  if(name=="text"||name=="string")return callable(name,1,1,[](const std::vector<Value>&a,SourcePos){return Value(a[0].text());});
+  if(name=="int"||name=="integer")return callable(name,1,1,[](const std::vector<Value>&a,SourcePos p){return convert_int_value(a[0],p);});
+  if(name=="num"||name=="double"||name=="float")return callable(name,1,1,[](const std::vector<Value>&a,SourcePos p){return convert_num_value(a[0],p);});
+  if(name=="bool"||name=="boolean")return callable(name,1,1,[](const std::vector<Value>&a,SourcePos p){return convert_bool_value(a[0],p);});
+  if(name=="char")return callable(name,1,1,[](const std::vector<Value>&a,SourcePos p){return convert_char_value(a[0],p);});
+  return {};
 }
 std::mt19937_64& random_engine(){static std::mt19937_64 engine{std::random_device{}()};return engine;}
 std::string platform_name(){
@@ -115,10 +209,10 @@ Value Interpreter::member(Value v,const std::string&name,SourcePos p,bool auto_c
 }
 
 Value Interpreter::evaluate(const ast::ExprPtr& e){
-  if(auto x=std::dynamic_pointer_cast<ast::Literal>(e))return std::visit([](auto v){return Value(v);},x->value);if(auto x=std::dynamic_pointer_cast<ast::Duration>(e))return DurationData{x->milliseconds};if(auto x=std::dynamic_pointer_cast<ast::Variable>(e)){auto v=env_->get(x->name,x->pos);if(auto t=std::get_if<std::shared_ptr<TypeData>>(&v.data()))return instantiate(*t,x->pos);if(auto f=std::get_if<std::shared_ptr<CallableData>>(&v.data());f&&(*f)->min_args==0&&!(*f)->variadic)return call(v,{},x->pos);return v;}if(auto x=std::dynamic_pointer_cast<ast::Unary>(e)){auto v=evaluate(x->value);if(x->op==TokenKind::Not)return !v.truth(x->pos);if(auto n=std::get_if<std::int64_t>(&v.data()))return -*n;if(auto n=std::get_if<double>(&v.data()))return -*n;throw Error(x->pos,"Only a number can follow '-'.");}if(auto x=std::dynamic_pointer_cast<ast::Binary>(e)){auto a=evaluate(x->left);if(x->op==TokenKind::And&&!a.truth(x->pos))return false;if(x->op==TokenKind::Or&&a.truth(x->pos))return true;return binary(x->op,a,evaluate(x->right),x->pos);}
+  if(auto x=std::dynamic_pointer_cast<ast::Literal>(e))return std::visit([](auto v){return Value(v);},x->value);if(auto x=std::dynamic_pointer_cast<ast::Duration>(e))return DurationData{x->milliseconds};if(auto x=std::dynamic_pointer_cast<ast::Variable>(e)){Value v;if(env_->has(x->name))v=env_->get(x->name,x->pos);else if(auto builtin=conversion_callable(x->name))v=Value(builtin);else v=env_->get(x->name,x->pos);if(auto t=std::get_if<std::shared_ptr<TypeData>>(&v.data()))return instantiate(*t,x->pos);if(auto f=std::get_if<std::shared_ptr<CallableData>>(&v.data());f&&(*f)->min_args==0&&!(*f)->variadic)return call(v,{},x->pos);return v;}if(auto x=std::dynamic_pointer_cast<ast::Unary>(e)){auto v=evaluate(x->value);if(x->op==TokenKind::Not)return !v.truth(x->pos);if(auto n=std::get_if<std::int64_t>(&v.data()))return -*n;if(auto n=std::get_if<double>(&v.data()))return -*n;throw Error(x->pos,"Only a number can follow '-'.");}if(auto x=std::dynamic_pointer_cast<ast::Binary>(e)){auto a=evaluate(x->left);if(x->op==TokenKind::And&&!a.truth(x->pos))return false;if(x->op==TokenKind::Or&&a.truth(x->pos))return true;return binary(x->op,a,evaluate(x->right),x->pos);}
   if(auto x=std::dynamic_pointer_cast<ast::List>(e)){auto l=std::make_shared<ListData>();for(auto&i:x->items)l->items.push_back(evaluate(i));return l;}if(auto x=std::dynamic_pointer_cast<ast::Set>(e)){auto s=std::make_shared<SetData>();for(auto&i:x->items){auto v=evaluate(i);bool found=false;for(auto&old:s->items)if(value_equal(old,v)){found=true;break;}if(!found)s->items.push_back(std::move(v));}return s;}if(auto x=std::dynamic_pointer_cast<ast::Map>(e)){auto m=std::make_shared<MapData>();for(auto&i:x->items){auto k=evaluate(i.first);if(!std::holds_alternative<std::string>(k.data()))throw Error(i.first->pos,"Map keys are Text in SE.");auto key=std::get<std::string>(k.data());auto v=evaluate(i.second);auto old=std::find_if(m->items.begin(),m->items.end(),[&](auto&q){return q.first==key;});if(old==m->items.end())m->items.emplace_back(std::move(key),std::move(v));else old->second=std::move(v);}return m;}if(auto x=std::dynamic_pointer_cast<ast::Range>(e)){auto a=evaluate(x->start),b=evaluate(x->end);if(!std::holds_alternative<std::int64_t>(a.data())||!std::holds_alternative<std::int64_t>(b.data()))throw Error(x->pos,"A range needs two Int values.");auto l=std::make_shared<ListData>();auto from=std::get<std::int64_t>(a.data()),to=std::get<std::int64_t>(b.data());auto step=from<=to?1:-1;for(auto n=from;;n+=step){l->items.emplace_back(n);if(n==to)break;}return l;}
   if(auto x=std::dynamic_pointer_cast<ast::Index>(e)){auto v=evaluate(x->value),i=evaluate(x->index);if(auto l=std::get_if<std::shared_ptr<ListData>>(&v.data())){if(!std::holds_alternative<std::int64_t>(i.data()))throw Error(x->pos,"A List index needs Int.");auto n=std::get<std::int64_t>(i.data());if(n<0||static_cast<std::size_t>(n)>=(*l)->items.size())throw Error(x->pos,"List index "+std::to_string(n)+" is out of bounds. This list has "+std::to_string((*l)->items.size())+" items.");return (*l)->items[static_cast<std::size_t>(n)];}if(auto m=std::get_if<std::shared_ptr<MapData>>(&v.data())){if(!std::holds_alternative<std::string>(i.data()))throw Error(x->pos,"A Map key needs Text.");auto key=std::get<std::string>(i.data());for(auto&q:(*m)->items)if(q.first==key)return q.second;throw Error(x->pos,"Map has no key '"+key+"'.");}throw Error(x->pos,"Only List and Map can use [index].");}
-  if(auto x=std::dynamic_pointer_cast<ast::Member>(e))return member(evaluate(x->value),x->name,x->pos,true);if(auto x=std::dynamic_pointer_cast<ast::Ask>(e)){auto q=evaluate(x->question);if(!std::holds_alternative<std::string>(q.data()))throw Error(x->pos,"ask needs Text.");out_<<q.text()<<": ";std::string answer;std::getline(in_,answer);return answer;}if(auto x=std::dynamic_pointer_cast<ast::TryExpr>(e))return evaluate(x->value);if(auto x=std::dynamic_pointer_cast<ast::Call>(e)){Value c;if(auto m=std::dynamic_pointer_cast<ast::Member>(x->callee))c=member(evaluate(m->value),m->name,m->pos,false);else c=env_->get(std::dynamic_pointer_cast<ast::Variable>(x->callee)?std::dynamic_pointer_cast<ast::Variable>(x->callee)->name:"",x->pos);if(!std::dynamic_pointer_cast<ast::Variable>(x->callee)&&!std::dynamic_pointer_cast<ast::Member>(x->callee))c=evaluate(x->callee);std::vector<Value>a;for(auto&i:x->args)a.push_back(evaluate(i));return call(c,a,x->pos);}throw Error(e->pos,"This expression is not implemented.");
+  if(auto x=std::dynamic_pointer_cast<ast::Member>(e))return member(evaluate(x->value),x->name,x->pos,true);if(auto x=std::dynamic_pointer_cast<ast::Ask>(e)){auto q=evaluate(x->question);if(!std::holds_alternative<std::string>(q.data()))throw Error(x->pos,"ask needs Text.");out_<<q.text()<<": ";std::string answer;std::getline(in_,answer);return answer;}if(auto x=std::dynamic_pointer_cast<ast::TryExpr>(e))return evaluate(x->value);if(auto x=std::dynamic_pointer_cast<ast::Call>(e)){Value c;if(auto m=std::dynamic_pointer_cast<ast::Member>(x->callee))c=member(evaluate(m->value),m->name,m->pos,false);else if(auto v=std::dynamic_pointer_cast<ast::Variable>(x->callee)){if(env_->has(v->name))c=env_->get(v->name,x->pos);else if(auto builtin=conversion_callable(v->name))c=Value(builtin);else c=env_->get(v->name,x->pos);}else c=evaluate(x->callee);std::vector<Value>a;for(auto&i:x->args)a.push_back(evaluate(i));return call(c,a,x->pos);}throw Error(e->pos,"This expression is not implemented.");
 }
 
 void Interpreter::execute(const ast::StmtPtr& s){
