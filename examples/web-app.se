@@ -13,14 +13,12 @@ ui.style "button" [
 ]
 
 count = 0
-root = ui.el "main"
+root = ui.el "main" "" ["class": "app"]
 title = ui.el "h1" "SE Web"
-button = ui.el "button" "Count"
-output = ui.el "p" "0"
+button = ui.el "button" "Count" ["type": "button", "id": "counter"]
+output = ui.el "p" "0" ["aria-live": "polite"]
 
-ui.add root title
-ui.add root button
-ui.add root output
+ui.add root title button output
 
 make clicked event
     count += 1
