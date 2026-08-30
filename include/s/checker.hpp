@@ -42,7 +42,10 @@ inline TypeInfo::TypeInfo(TypeKind k):kind(k){
 }
 
 class Checker {
-public: void check(const ast::Program&);
+public:
+  void check(const ast::Program&);
+  static bool compatible(const TypeInfo&,const TypeInfo&);
+  static std::string type_text(const TypeInfo&);
 private:
   using Scope=std::unordered_map<std::string,TypeInfo>;
   std::vector<Scope> scopes_{{}};
@@ -55,7 +58,6 @@ private:
   void constrain(const ast::ExprPtr&,const TypeInfo&);
   void check_project(const ast::Program&); void check_module(const ast::Module&);
   void install_builtins(); TypeInfo builtin_module(const std::string&) const;
-  static bool compatible(const TypeInfo&,const TypeInfo&); static std::string type_text(const TypeInfo&);
   static TypeInfo from_native_name(const std::string&);
   std::shared_ptr<FunctionSig> member_call(const TypeInfo&,const std::string&,SourcePos) const;
 };

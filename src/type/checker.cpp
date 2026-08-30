@@ -20,32 +20,51 @@ TypeInfo fn(std::vector<TypeInfo> p,TypeInfo r,bool fallible=false,bool variadic
   t.callable->min_args=min;
   return t;
 }
-TypeInfo named_type(const std::string& n,const std::vector<std::string>& generics){
+void no_type_args(const ast::TypeRef& ref,SourcePos p){
+  if(!ref.args.empty())throw Error(p,"Type '"+ref.name+"' does not take type arguments.");
+}
+TypeInfo named_type(const ast::TypeRef& ref,const std::vector<std::string>& generics,SourcePos p){
+  const auto& n=ref.name;
   if(n.empty())return TypeInfo{};
-  if(std::find(generics.begin(),generics.end(),n)!=generics.end()){TypeInfo t(TypeKind::Generic);t.name=n;return t;}
-  if(n=="None")return TypeInfo(TypeKind::None);
-  if(n=="Int")return TypeInfo(TypeKind::Int);
-  if(n=="Num")return TypeInfo(TypeKind::Num);
-  if(n=="Text")return TypeInfo(TypeKind::Text);
-  if(n=="Bool")return TypeInfo(TypeKind::Bool);
-  if(n=="Bytes")return TypeInfo(TypeKind::Bytes);
-  if(n=="List")return list_of(TypeInfo{});
-  if(n=="Map")return map_of(TypeInfo(TypeKind::Text),TypeInfo{});
-  if(n=="Set")return set_of(TypeInfo{});
-  if(n=="Path")return TypeInfo(TypeKind::Path);
-  if(n=="File")return TypeInfo(TypeKind::File);
-  if(n=="Duration")return TypeInfo(TypeKind::Duration);
-  if(n=="Time")return TypeInfo(TypeKind::Time);
+  if(std::find(generics.begin(),generics.end(),n)!=generics.end()){
+    no_type_args(ref,p);TypeInfo t(TypeKind::Generic);t.name=n;return t;
+  }
+  if(n=="List"){
+    if(ref.args.size()>1)throw Error(p,"List takes one type argument, like List[Int].");
+    return list_of(ref.args.empty()?TypeInfo{}:named_type(ref.args[0],generics,p));
+  }
+  if(n=="Set"){
+    if(ref.args.size()>1)throw Error(p,"Set takes one type argument, like Set[Text].");
+    return set_of(ref.args.empty()?TypeInfo{}:named_type(ref.args[0],generics,p));
+  }
+  if(n=="Map"){
+    if(ref.args.empty())return map_of(TypeInfo(TypeKind::Text),TypeInfo{});
+    if(ref.args.size()!=2)throw Error(p,"Map takes two type arguments, like Map[Text, Int].");
+    auto key=named_type(ref.args[0],generics,p);
+    if(key.kind!=TypeKind::Text)throw Error(p,"Map keys are Text in SE, so use Map[Text, ValueType].");
+    return map_of(std::move(key),named_type(ref.args[1],generics,p));
+  }
+  if(n=="None"){no_type_args(ref,p);return TypeInfo(TypeKind::None);}
+  if(n=="Int"){no_type_args(ref,p);return TypeInfo(TypeKind::Int);}
+  if(n=="Num"){no_type_args(ref,p);return TypeInfo(TypeKind::Num);}
+  if(n=="Text"){no_type_args(ref,p);return TypeInfo(TypeKind::Text);}
+  if(n=="Bool"){no_type_args(ref,p);return TypeInfo(TypeKind::Bool);}
+  if(n=="Bytes"){no_type_args(ref,p);return TypeInfo(TypeKind::Bytes);}
+  if(n=="Path"){no_type_args(ref,p);return TypeInfo(TypeKind::Path);}
+  if(n=="File"){no_type_args(ref,p);return TypeInfo(TypeKind::File);}
+  if(n=="Duration"){no_type_args(ref,p);return TypeInfo(TypeKind::Duration);}
+  if(n=="Time"){no_type_args(ref,p);return TypeInfo(TypeKind::Time);}
+  if(!ref.args.empty())throw Error(p,"Generic user types such as '"+n+"[...]' are planned for the next type-system phase.");
   TypeInfo t(TypeKind::Object);t.name=n;return t;
 }
 void configure_signature(const ast::Function& f,const std::shared_ptr<FunctionSig>& sig){
   sig->generic_params=f.generic_params;
   sig->params.clear();
   for(std::size_t i=0;i<f.params.size();++i){
-    auto annotation=i<f.param_types.size()?f.param_types[i]:std::string{};
-    sig->params.push_back(named_type(annotation,f.generic_params));
+    const ast::TypeRef annotation=i<f.param_types.size()?f.param_types[i]:ast::TypeRef{};
+    sig->params.push_back(named_type(annotation,f.generic_params,f.pos));
   }
-  sig->result=named_type(f.result_type,f.generic_params);
+  sig->result=named_type(f.result_type,f.generic_params,f.pos);
 }
 TypeInfo substitute(const TypeInfo& t,const std::unordered_map<std::string,TypeInfo>& bindings){
   if(t.kind==TypeKind::Generic){auto i=bindings.find(t.name);return i==bindings.end()?t:i->second;}
@@ -54,6 +73,21 @@ TypeInfo substitute(const TypeInfo& t,const std::unordered_map<std::string,TypeI
   if(t.key)out.key=std::make_shared<TypeInfo>(substitute(*t.key,bindings));
   if(t.value)out.value=std::make_shared<TypeInfo>(substitute(*t.value,bindings));
   return out;
+}
+void bind_generics(const TypeInfo& expected,const TypeInfo& got,std::unordered_map<std::string,TypeInfo>& bindings,SourcePos p){
+  if(expected.kind==TypeKind::Generic){
+    if(got.kind==TypeKind::Unknown)return;
+    auto i=bindings.find(expected.name);
+    if(i==bindings.end()||i->second.kind==TypeKind::Unknown){bindings[expected.name]=got;return;}
+    if(!Checker::compatible(i->second,got))throw Error(p,"Generic type '"+expected.name+"' was already inferred as "+Checker::type_text(i->second)+", but this value is "+Checker::type_text(got)+".");
+    return;
+  }
+  if(expected.kind!=got.kind)return;
+  if((expected.kind==TypeKind::List||expected.kind==TypeKind::Set)&&expected.element&&got.element)bind_generics(*expected.element,*got.element,bindings,p);
+  if(expected.kind==TypeKind::Map){
+    if(expected.key&&got.key)bind_generics(*expected.key,*got.key,bindings,p);
+    if(expected.value&&got.value)bind_generics(*expected.value,*got.value,bindings,p);
+  }
 }
 bool conversion_builtin_type(const std::string& name,TypeInfo& out){
   if(name=="text"||name=="string"){out=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Text));return true;}
@@ -75,9 +109,9 @@ std::string Checker::type_text(const TypeInfo& t){
     case TypeKind::Text:return "Text";
     case TypeKind::Bool:return "Bool";
     case TypeKind::Bytes:return "Bytes";
-    case TypeKind::List:return "List";
-    case TypeKind::Map:return "Map";
-    case TypeKind::Set:return "Set";
+    case TypeKind::List:return "List["+(t.element?type_text(*t.element):std::string("value"))+"]";
+    case TypeKind::Map:return "Map["+(t.key?type_text(*t.key):std::string("value"))+", "+(t.value?type_text(*t.value):std::string("value"))+"]";
+    case TypeKind::Set:return "Set["+(t.element?type_text(*t.element):std::string("value"))+"]";
     case TypeKind::Function:return "Function";
     case TypeKind::Object:return t.object?t.object->name:(!t.name.empty()?t.name:"Object");
     case TypeKind::Module:return "Module";
@@ -196,8 +230,9 @@ TypeInfo Checker::expr(const ast::ExprPtr& e){
     std::unordered_map<std::string,TypeInfo> generic_bindings;
     for(std::size_t i=0;i<x->args.size();++i){
       auto got=expr(x->args[i]);if(sig->variadic||i>=sig->params.size())continue;auto expected=sig->params[i];
-      if(expected.kind==TypeKind::Generic){auto it=generic_bindings.find(expected.name);if(it==generic_bindings.end())generic_bindings[expected.name]=got;else if(!compatible(it->second,got))throw Error(x->args[i]->pos,"Generic type '"+expected.name+"' was already inferred as "+type_text(it->second)+".");}
-      else if(!compatible(expected,got))throw Error(x->args[i]->pos,"This value needs "+type_text(expected)+", but you gave it "+type_text(got)+".");
+      bind_generics(expected,got,generic_bindings,x->args[i]->pos);
+      auto resolved=substitute(expected,generic_bindings);
+      if(!compatible(resolved,got))throw Error(x->args[i]->pos,"This value needs "+type_text(resolved)+", but you gave it "+type_text(got)+".");
     }
     if(sig->fallible&&error_depth_==0&&propagate_depth_==0)throw Error(x->pos,"This operation can fail.","Handle it with a try block, or propagate it with 'try '+expression.");if(sig->fallible&&propagate_depth_>0&&current_function_)current_function_->fallible=true;return substitute(sig->result,generic_bindings);
   }

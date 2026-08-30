@@ -7,6 +7,8 @@ namespace {
 std::string q(const std::string&s){std::ostringstream o;o<<std::quoted(s);return o.str();}
 std::string pos(SourcePos p){return "SourcePos{"+std::to_string(p.line)+","+std::to_string(p.column)+"}";}
 std::string strings(const std::vector<std::string>&v){std::string r="std::vector<std::string>{";for(std::size_t i=0;i<v.size();++i){if(i)r+=",";r+=q(v[i]);}return r+"}";}
+std::string type_ref(const ast::TypeRef&t){std::string r="ast::TypeRef{"+q(t.name)+",std::vector<ast::TypeRef>{";for(std::size_t i=0;i<t.args.size();++i){if(i)r+=",";r+=type_ref(t.args[i]);}return r+"}}";}
+std::string type_refs(const std::vector<ast::TypeRef>&v){std::string r="std::vector<ast::TypeRef>{";for(std::size_t i=0;i<v.size();++i){if(i)r+=",";r+=type_ref(v[i]);}return r+"}";}
 }
 
 std::string CppCompiler::expr(const ast::ExprPtr&e) const{
@@ -28,7 +30,7 @@ std::string CppCompiler::expr(const ast::ExprPtr&e) const{
 }
 
 std::string CppCompiler::block(const ast::Block&b) const{std::string r="ast::Block{";for(std::size_t i=0;i<b.size();++i){if(i)r+=",";r+=stmt(b[i]);}return r+"}";}
-std::string CppCompiler::function(const std::shared_ptr<ast::Function>&x) const{return "std::make_shared<ast::Function>("+pos(x->pos)+","+q(x->name)+","+strings(x->params)+","+block(x->body)+","+strings(x->generic_params)+","+strings(x->param_types)+","+q(x->result_type)+")";}
+std::string CppCompiler::function(const std::shared_ptr<ast::Function>&x) const{return "std::make_shared<ast::Function>("+pos(x->pos)+","+q(x->name)+","+strings(x->params)+","+block(x->body)+","+strings(x->generic_params)+","+type_refs(x->param_types)+","+type_ref(x->result_type)+")";}
 
 std::string CppCompiler::stmt(const ast::StmtPtr&s) const{
   if(auto x=std::dynamic_pointer_cast<ast::ExprStmt>(s))return "std::make_shared<ast::ExprStmt>("+pos(x->pos)+","+expr(x->value)+")";

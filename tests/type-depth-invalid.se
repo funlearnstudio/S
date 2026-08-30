@@ -1,0 +1,4 @@
+make same[T] values:List[T] value:T -> T
+    give value
+
+say same [1, 2] "bad"

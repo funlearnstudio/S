@@ -16,6 +16,15 @@ struct Stmt { explicit Stmt(SourcePos p) : pos(p) {} virtual ~Stmt()=default; So
 using StmtPtr = std::shared_ptr<Stmt>;
 using Block = std::vector<StmtPtr>;
 
+struct TypeRef {
+  std::string name;
+  std::vector<TypeRef> args;
+  TypeRef()=default;
+  explicit TypeRef(std::string n):name(std::move(n)){}
+  TypeRef(std::string n,std::vector<TypeRef> a):name(std::move(n)),args(std::move(a)){}
+  bool empty() const { return name.empty(); }
+};
+
 struct Literal final : Expr { using Data=std::variant<std::int64_t,double,std::string,bool>; Literal(SourcePos p,Data v):Expr(p),value(std::move(v)){} Data value; };
 struct Duration final : Expr { Duration(SourcePos p,std::int64_t ms):Expr(p),milliseconds(ms){} std::int64_t milliseconds; };
 struct Variable final : Expr { Variable(SourcePos p,std::string n):Expr(p),name(std::move(n)){} std::string name; };
@@ -39,14 +48,14 @@ struct Repeat final : Stmt { Repeat(SourcePos p,ExprPtr c,Block b):Stmt(p),count
 struct For final : Stmt { For(SourcePos p,std::vector<std::string> n,ExprPtr v,Block b):Stmt(p),names(std::move(n)),values(std::move(v)),body(std::move(b)){} std::vector<std::string> names; ExprPtr values; Block body; };
 struct While final : Stmt { While(SourcePos p,ExprPtr c,Block b):Stmt(p),condition(std::move(c)),body(std::move(b)){} ExprPtr condition; Block body; };
 struct Function final : Stmt {
-  Function(SourcePos p,std::string n,std::vector<std::string> a,Block b,std::vector<std::string> g={},std::vector<std::string> pt={},std::string rt={})
+  Function(SourcePos p,std::string n,std::vector<std::string> a,Block b,std::vector<std::string> g={},std::vector<TypeRef> pt={},TypeRef rt={})
       :Stmt(p),name(std::move(n)),params(std::move(a)),body(std::move(b)),generic_params(std::move(g)),param_types(std::move(pt)),result_type(std::move(rt)){}
   std::string name;
   std::vector<std::string> params;
   Block body;
   std::vector<std::string> generic_params;
-  std::vector<std::string> param_types;
-  std::string result_type;
+  std::vector<TypeRef> param_types;
+  TypeRef result_type;
 };
 struct Give final : Stmt { Give(SourcePos p,ExprPtr v):Stmt(p),value(std::move(v)){} ExprPtr value; };
 struct FieldDecl { SourcePos pos; std::string name; ExprPtr value; };
