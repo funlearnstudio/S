@@ -43,7 +43,13 @@ This is the main English documentation index for SE.
 - [Runtime Design](runtime-design.md)
 - [Technical Reference](technical-reference.md)
 
-## 5. Versioned development documents
+## 5. Tooling and editor support
+
+- [VS Code Extension](../vscode/README.md) — highlighting, IntelliSense, navigation and Run/Check/Build commands.
+- [GitHub Syntax Highlighting](github-syntax-highlighting.md) — TextMate grammar and GitHub Linguist requirements.
+- [Linguist Submission Bundle](../linguist/README.md) — preparation material for a future upstream Linguist contribution.
+
+## 6. Versioned development documents
 
 These documents describe specific development stages and are kept separate from the stable language reference:
 
@@ -58,7 +64,7 @@ These documents describe specific development stages and are kept separate from 
 
 A versioned design document is not automatically a promise that every item in it is part of the current stable release.
 
-## 6. Stable vs current source
+## 7. Stable vs current source
 
 - **Stable release:** installation and ordinary CLI usage follow the current GitHub Release.
 - **Current source:** `main` may contain newer compiler/Web work while the reported language version still matches the stable line.
