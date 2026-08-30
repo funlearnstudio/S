@@ -4,7 +4,7 @@ type Box[T]
     make get -> T
         give value
 
-    make set next:T
+    make replace next:T
         value = next
 
 type Pair[A, B]
@@ -22,7 +22,7 @@ box = Box[Int]
 
 say box.value
 say box.get
-box.set 50
+box.replace 50
 say box.get
 say unwrap box
 
