@@ -75,8 +75,9 @@ make SendPost
         when click
             browser.text "#api-output" "Sending JSON..."
             payload = ["title": "Hello from SE", "body": "Sent by the SE browser runtime", "userId": 1]
+            options = ["timeout": 8000, "retries": 1, "throw_http": true]
             try
-                task = browser.post_json "https://jsonplaceholder.typicode.com/posts" payload ["timeout": 8000, "retries": 1, "throw_http": true]
+                task = browser.post_json "https://jsonplaceholder.typicode.com/posts" payload options
                 result = async.await task
                 pretty = browser.pretty result.data
                 browser.text "#api-output" pretty
@@ -166,9 +167,10 @@ make SendForm
     js
         when click
             data = browser.form_json "#message-form"
+            options = ["timeout": 8000, "retries": 1, "throw_http": true]
             browser.text "#send-output" "Sending form..."
             try
-                task = browser.post_json "https://httpbin.org/post" data ["timeout": 8000, "retries": 1, "throw_http": true]
+                task = browser.post_json "https://httpbin.org/post" data options
                 result = async.await task
                 pretty = browser.pretty result.data
                 browser.text "#send-output" pretty
