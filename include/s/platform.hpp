@@ -3,6 +3,7 @@
 #include "s/checker.hpp"
 #include "s/value.hpp"
 #include "s/advanced.hpp"
+#include "s/database.hpp"
 #include <memory>
 #include <string>
 
@@ -18,14 +19,22 @@ inline bool combined_platform_builtin(const std::string& name){
 }
 
 inline TypeInfo combined_platform_builtin_type(const std::string& name){
-  if(is_advanced_builtin(name)) return advanced_builtin_type(name);
+  if(is_advanced_builtin(name)){
+    auto module=advanced_builtin_type(name);
+    if(name=="db") extend_database_type(module);
+    return module;
+  }
   auto module=platform_builtin_type(name);
   if(name=="collections") extend_collections_type(module);
   return module;
 }
 
 inline std::shared_ptr<ModuleData> combined_platform_builtin_module(const std::string& name,Interpreter& vm){
-  if(is_advanced_builtin(name)) return advanced_builtin_module(name,vm);
+  if(is_advanced_builtin(name)){
+    auto module=advanced_builtin_module(name,vm);
+    if(name=="db") extend_database_module(module,vm);
+    return module;
+  }
   auto module=platform_builtin_module(name,vm);
   if(name=="collections") extend_collections_module(module,vm);
   return module;
