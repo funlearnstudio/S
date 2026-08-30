@@ -1,0 +1,12 @@
+make first[T] values:List[T] -> T
+    give values[0]
+
+make lookup[T] values:Map[Text, T] key:Text -> T
+    give values[key]
+
+make nested[T] values:List[Map[Text, T]] -> T
+    give values[0]["value"]
+
+say first [10, 20]
+say lookup ["name": "SE"] "name"
+say nested [["value": 7]]
