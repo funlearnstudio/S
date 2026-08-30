@@ -59,6 +59,26 @@ std::shared_ptr<ast::Function> Parser::function(SourcePos start){
   ast::TypeRef result_type;
   if(match(TokenKind::Arrow)) result_type=type_ref();
   auto b=block();
+
+  // Once a normal make block contains a Web section, preserve the shorter
+  // component form `text value` by lowering it into the same Web AST. This is
+  // contextual, so ordinary SE functions keep their existing call semantics.
+  bool web=false;
+  for(const auto& item:b)if(std::dynamic_pointer_cast<ast::WebSection>(item)){web=true;break;}
+  if(web){
+    ast::Block lowered;
+    for(const auto& item:b){
+      auto statement=std::dynamic_pointer_cast<ast::ExprStmt>(item);
+      auto call=statement?std::dynamic_pointer_cast<ast::Call>(statement->value):nullptr;
+      auto callee=call?std::dynamic_pointer_cast<ast::Variable>(call->callee):nullptr;
+      if(callee&&callee->name=="text"&&call->args.size()==1){
+        auto section=std::make_shared<ast::WebSection>(item->pos,"html");
+        section->elements.push_back({item->pos,"text",{call->args.front()}, {}});
+        lowered.push_back(section);
+      }else lowered.push_back(item);
+    }
+    b=std::move(lowered);
+  }
   return std::make_shared<ast::Function>(start,name.text,std::move(params),std::move(b),std::move(generics),std::move(param_types),std::move(result_type));
 }
 
@@ -406,7 +426,12 @@ ast::ExprPtr Parser::postfix(ast::ExprPtr value){
         take(TokenKind::RightBracket,"Close type arguments with ']'.");
         continue;
       }
-      if(match(TokenKind::LeftBracket)){auto i=expression();take(TokenKind::RightBracket,"Close this index with ']'.");arg=std::make_shared<ast::Index>(arg->pos,arg,i);continue;}
+      // A following '[' after a literal argument is another low-punctuation
+      // function argument, not an index. Indexing remains available for names
+      // and member/index expressions, which covers SE's ordinary collection use.
+      if(check(TokenKind::LeftBracket)&&(std::dynamic_pointer_cast<ast::Variable>(arg)||std::dynamic_pointer_cast<ast::Member>(arg)||std::dynamic_pointer_cast<ast::Index>(arg))){
+        ++at_;auto i=expression();take(TokenKind::RightBracket,"Close this index with ']'.");arg=std::make_shared<ast::Index>(arg->pos,arg,i);continue;
+      }
       if(match(TokenKind::Dot)){auto n=take_member_name();arg=std::make_shared<ast::Member>(arg->pos,arg,n.text);continue;}
       break;
     }
