@@ -54,7 +54,7 @@ GET / HEAD 預設會對相同 request key 做 in-flight deduplication，避免�
 
 ```se
 browser.cancel "load-users"
-browser.cancel_all
+browser.cancel_all()
 ```
 
 要讓 request 可以用固定名稱取消，傳入 `key`：
@@ -62,6 +62,8 @@ browser.cancel_all
 ```se
 task = browser.get "/api/users" ["key": "load-users", "timeout": 10000]
 ```
+
+`examples/browser-api.se` 也有真正的 slow request，可以在請求進行中按另一個按鈕呼叫 `browser.cancel "slow-request"`，確認 AbortController 會實際中止底層 request。
 
 ## JSON 傳送
 
@@ -113,9 +115,9 @@ build 仍然輸出標準 `index.html` / `style.css` / `app.js` / `app.ts`。頁�
 ```se
 browser.go "/settings"
 browser.replace "/login"
-browser.back
-browser.forward
-browser.reload
+browser.back()
+browser.forward()
+browser.reload()
 ```
 
 外部網址：
@@ -167,4 +169,4 @@ Browser event 目前也支援 assignment、`if` / `else if` / `else`、`repeat`�
 examples/browser-api.se
 ```
 
-這個單檔範例包含 `/`、`/api`、`/send`、`/about`，並測試 GET JSON、POST JSON、HTTP error、retry、timeout、取消、表單轉 JSON、頁面導航與外部頁面。
+這個單檔範例包含 `/`、`/api`、`/send`、`/about`，並測試 GET JSON、POST JSON、HTTP error、retry、timeout、實際取消、表單轉 JSON、頁面導航與外部頁面。
