@@ -1,0 +1,22 @@
+make ApiDemo text
+    html
+        section
+            h1 text
+            p "Open the browser console to see the API result."
+            button "Load API"
+
+    css
+        padding 24
+        border_radius 12
+
+        button
+            padding 12
+            border_radius 8
+
+    js
+        native "async function seApiDemo(){ const result = await browser.get('https://jsonplaceholder.typicode.com/todos/1', { timeout: 8000, retries: 2 }); console.log(result); }"
+        when click
+            seApiDemo
+
+page "/"
+    ApiDemo "SE Browser API"
