@@ -24,10 +24,10 @@ jobs:
           - os: ubuntu-latest
             asset: se-0.6.0-linux-x64
             archive: tar.gz
-          - os: macos-14
+          - os: macos-15-intel
             asset: se-0.6.0-macos-x64
             archive: tar.gz
-          - os: macos-14-arm64
+          - os: macos-14
             asset: se-0.6.0-macos-arm64
             archive: tar.gz
           - os: windows-latest
