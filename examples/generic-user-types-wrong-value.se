@@ -1,0 +1,5 @@
+type Box[T]
+    value:T
+
+box = Box[Int]
+    value = "wrong"
