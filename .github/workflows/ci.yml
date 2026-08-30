@@ -13,6 +13,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - name: Validate VS Code TextMate grammar
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          grammar = json.loads(Path("vscode/syntaxes/se.tmLanguage.json").read_text(encoding="utf-8"))
+          assert grammar["scopeName"] == "source.se"
+          assert "se" in grammar.get("fileTypes", [])
+          assert grammar.get("patterns")
+          print("SE TextMate grammar is valid JSON and declares source.se")
       - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
       - run: cmake --build build --config Release --parallel
       - run: ctest --test-dir build -C Release --output-on-failure
