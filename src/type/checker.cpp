@@ -55,6 +55,14 @@ TypeInfo substitute(const TypeInfo& t,const std::unordered_map<std::string,TypeI
   if(t.value)out.value=std::make_shared<TypeInfo>(substitute(*t.value,bindings));
   return out;
 }
+bool conversion_builtin_type(const std::string& name,TypeInfo& out){
+  if(name=="text"||name=="string"){out=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Text));return true;}
+  if(name=="int"||name=="integer"){out=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Int));return true;}
+  if(name=="num"||name=="double"||name=="float"){out=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Num));return true;}
+  if(name=="bool"||name=="boolean"){out=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Bool));return true;}
+  if(name=="char"){out=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Text));return true;}
+  return false;
+}
 }
 
 std::string Checker::type_text(const TypeInfo& t){
@@ -101,6 +109,7 @@ bool Checker::compatible(const TypeInfo& a,const TypeInfo& b){
 
 TypeInfo Checker::find(const std::string& n,SourcePos p) const{
   for(auto i=scopes_.rbegin();i!=scopes_.rend();++i){if(auto x=i->find(n);x!=i->end())return x->second;}
+  TypeInfo conversion;if(conversion_builtin_type(n,conversion))return conversion;
   throw Error(p,"I don't know what \""+n+"\" is.","Create it first with "+n+" = value, or check the spelling.");
 }
 
@@ -126,16 +135,6 @@ void Checker::install_builtins(){
   g["open"]=fn({pathish},TypeInfo(TypeKind::File),true);
   g["wait"]=fn({TypeInfo(TypeKind::Duration)},TypeInfo(TypeKind::None));
   g["bytes"]=fn({TypeInfo(TypeKind::Text)},TypeInfo(TypeKind::Bytes));
-  g["text"]=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Text));
-  g["string"]=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Text));
-  g["int"]=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Int));
-  g["integer"]=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Int));
-  g["num"]=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Num));
-  g["double"]=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Num));
-  g["float"]=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Num));
-  g["bool"]=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Bool));
-  g["boolean"]=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Bool));
-  g["char"]=fn({TypeInfo(TypeKind::Unknown)},TypeInfo(TypeKind::Text));
 }
 
 TypeInfo Checker::builtin_module(const std::string& name) const{
