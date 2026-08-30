@@ -11,6 +11,7 @@
     { "include": "#generic-parameters" },
     { "include": "#numbers" },
     { "include": "#constants" },
+    { "include": "#web-keywords" },
     { "include": "#control-keywords" },
     { "include": "#declaration-keywords" },
     { "include": "#builtin-types" },
@@ -117,6 +118,26 @@
         }
       ]
     },
+    "web-keywords": {
+      "patterns": [
+        {
+          "name": "keyword.other.web.section.se",
+          "match": "\\b(?:html|css|js|style)\\b"
+        },
+        {
+          "name": "keyword.control.web.event.se",
+          "match": "\\bwhen\\b"
+        },
+        {
+          "name": "keyword.other.web.page.se",
+          "match": "\\bpage\\b"
+        },
+        {
+          "name": "keyword.other.web.native.se",
+          "match": "\\bnative\\b"
+        }
+      ]
+    },
     "control-keywords": {
       "patterns": [
         {
@@ -173,7 +194,7 @@
       "patterns": [
         {
           "name": "support.namespace.se",
-          "match": "\\b(?:math|random|os|json|collections|function|option|result|async|db|https|http|web|ui|test|process|path|file|time|js|ts)\\b"
+          "match": "\\b(?:math|random|os|json|collections|function|option|result|async|db|https|http|web|ui|test|process|path|file|time|ts)\\b"
         }
       ]
     },
