@@ -1,128 +1,114 @@
 # SE 0.6 進階 API 參考
 
-本文件是 `advanced-0.6-api.md` 的繁體中文版，整理 SE 0.6 新增的高階 API。完整概念教學請搭配 `advanced-0.6-zh-TW.md`。
+[English version](advanced-0.6-api.md) · [概念教學](advanced-0.6-zh-TW.md)
+
+這份文件是 0.6 advanced runtime layer 的精簡 API Reference。
 
 ## collections
 
-```se
-use collections
+```text
+collections.filter list predicate -> List
+collections.map list transform -> List
+collections.reduce list initial reducer -> value
+collections.sort_by list key -> List
+collections.sort_by_desc list key -> List
+collections.sort_with list comparator -> List
+collections.slice list start end -> List
+collections.take list count -> List
+collections.drop list count -> List
 ```
 
-- `collections.filter list predicate`：保留 predicate 回傳 true 的元素。
-- `collections.map list transform`：逐項轉換並回傳新 List。
-- `collections.reduce list initial reducer`：依序累積結果。
-- `collections.sort_by list "key"`：依 Map key 或 object field 升冪排序。
-- `collections.sort_by_desc list "key"`：降冪排序。
-- `collections.sort_with list comparator`：使用 `(a, b) -> Bool` 比較函式。
-- `collections.slice list start end`：取得 `[start, end)`；支援負索引。
-- `collections.take list count`：取前 count 項。
-- `collections.drop list count`：略過前 count 項。
-
-以上操作都會回傳新 List，不直接改動原 List。
+這些 helper 原則上回傳新 List，不暴露 host container mutation detail。
 
 ## function
 
-```se
-use function
+```text
+function.bind fn values... -> Function
+function.call fn values... -> value
+function.pipe value fn... -> value
 ```
 
-- `function.bind fn value...`：預先綁定部分參數並回傳新 callable。
-- `function.call fn value...`：以函式值呼叫。
-- `function.pipe value fn...`：把值依序送進一串單參數函式。
-
-巢狀 `make` 會建立 lexical closure，能捕捉外層環境。
+巢狀 `make` 另外支援 lexical closure。
 
 ## async
 
-```se
-use async
+```text
+async.run fn values... -> Task
+async.ready task -> Bool
+async.await task -> value
 ```
 
-- `async.run fn args... -> Task`
-- `async.ready task -> Bool`
-- `async.await task -> value`
-
-`await` 可能失敗，因此應放在 `try` 中。Interpreter 為了 VM 安全會序列化進入 SE VM 的 callback；這不是無限制多執行緒執行模型。
+Task failure 可進入 recoverable error model。Interpreter VM callback 會依 implementation 做 managed/serialized execution；這個 API 不代表任意 VM code 都能 unrestricted parallel execution。
 
 ## option
 
-```se
-use option
+```text
+option.some value -> Option
+option.none -> Option
+option.is_some option -> Bool
+option.is_none option -> Bool
+option.value option -> value
+option.or option fallback -> value
 ```
 
-- `option.some value`
-- `option.none`
-- `option.is_some option`
-- `option.is_none option`
-- `option.value option`
-- `option.or option fallback`
-
-`option.value` 對 none 取值會產生 `OptionError`。
+對 `none` 直接取 value 會產生 Option-level error。
 
 ## result
 
-```se
-use result
+```text
+result.ok value -> Result
+result.err text -> Result
+result.is_ok result -> Bool
+result.is_err result -> Bool
+result.value result -> value
+result.error result -> Text
+result.or result fallback -> value
 ```
 
-- `result.ok value`
-- `result.err text`
-- `result.is_ok result`
-- `result.is_err result`
-- `result.value result`
-- `result.error result`
-- `result.or result fallback`
+## match Helpers
 
-## match helper
-
-```se
-use match
+```text
+match.value value pattern handler ... fallback -> value
+match.option option some_handler none_handler -> value
+match.result result ok_handler error_handler -> value
 ```
 
-- `match.value value pattern handler ... fallback`
-- `match.option option some_handler none_handler`
-- `match.result result ok_handler error_handler`
+語言本身另外有 `match / case / else` statement。
 
-語言本身另有 `match / case / else` statement。
+## Local Database
 
-## db
-
-```se
-use db
+```text
+db.open path -> Database
+db.set db key value -> None
+db.get db key -> Option
+db.has db key -> Bool
+db.remove db key -> Bool
+db.keys db -> List
+db.save db -> None
 ```
 
-- `db.open path -> Database`
-- `db.set db key value`
-- `db.get db key -> Option`
-- `db.has db key -> Bool`
-- `db.remove db key -> Bool`
-- `db.keys db -> List`
-- `db.save db`
+這是本機 persistent Text key/value store，不是 relational SQL database。
 
-目前是本機檔案型 **Text key/value store**，不是 SQL database。
+## HTTPS
 
-## https
-
-```se
-use https
+```text
+https.get url -> Text
+https.post url body -> Text
+https.post_json url json_text -> Text
 ```
 
-- `https.get url -> Text`
-- `https.post url body -> Text`
-- `https.post_json url json_text -> Text`
+0.6 HTTPS transport 使用系統 `curl` 處理 TLS / certificate。
 
-HTTPS 目前使用系統 `curl` 處理 TLS 與憑證驗證，因此 `curl` 必須存在於 PATH。
-
-## 泛型函式
+## Generic Function Syntax
 
 ```se
 make identity[T] value:T -> T
     give value
 ```
 
-SE 0.6 的泛型範圍是 generic functions；尚未宣稱支援 generic user types、traits 或 constraints。
+0.6 generic support 主要是 generic function；更深入 generic user type 工作放在 0.7 versioned document。
 
-## 模式匹配
+## Value Match Syntax
 
 ```se
 match status
@@ -134,4 +120,4 @@ match status
         say "unknown"
 ```
 
-目前支援 value pattern；destructuring 與 guard 尚未加入。
+此 stage 使用 value/equality pattern，不宣稱已有完整 destructuring / guard。
