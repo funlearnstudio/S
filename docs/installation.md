@@ -1,93 +1,27 @@
 # SE Installation / SE 安裝說明
 
-This guide explains how to build and install SE from source on macOS, Linux and Windows.
+SE 0.6.0 provides prebuilt packages for normal users. You can install and run SE without cloning the repository and without installing Git, CMake, or a C++ compiler.
 
-本文件說明如何在 macOS、Linux 與 Windows 從原始碼編譯並安裝 SE。
+SE 0.6.0 提供已預先編譯完成的安裝包。一般使用者不需要 Clone 原始碼，也不需要另外安裝 Git、CMake 或 C++ 編譯器，就可以直接安裝與執行 SE。
 
-> Current development version / 目前開發版本：`SE 0.6.0-dev`
+> Current release / 目前版本：`SE 0.6.0`
 
 ---
 
 ## English
 
-### 1. Requirements
-
-Install the following first:
-
-- Git
-- CMake 3.20 or newer
-- a C++20-capable compiler
-- `curl` if you want to use SE's HTTPS module
-
-Typical compilers:
-
-- macOS: Apple Clang from Xcode Command Line Tools
-- Linux: GCC or Clang with C++20 support
-- Windows: Visual Studio 2022 / MSVC with C++ desktop development tools
-
-### 2. Download SE
-
-```bash
-git clone https://github.com/funlearnstudio/SE.git
-cd SE
-```
-
-### 3. Configure
+### Quick install
 
 macOS / Linux:
 
 ```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+curl -fsSL https://raw.githubusercontent.com/funlearnstudio/SE/main/install.sh | sh
 ```
 
-Windows:
+Windows PowerShell:
 
 ```powershell
-cmake -S . -B build
-```
-
-### 4. Build
-
-macOS / Linux:
-
-```bash
-cmake --build build --parallel
-```
-
-Windows:
-
-```powershell
-cmake --build build --config Release
-```
-
-### 5. Run the test suite
-
-macOS / Linux:
-
-```bash
-ctest --test-dir build --output-on-failure
-```
-
-Windows:
-
-```powershell
-ctest --test-dir build -C Release --output-on-failure
-```
-
-It is recommended to run the tests before installation so you know the local compiler/runtime build is working correctly.
-
-### 6. Install on macOS / Linux
-
-Install into your user directory:
-
-```bash
-cmake --install build --prefix "$HOME/.local"
-```
-
-Make the `se` command available in the current terminal:
-
-```bash
-export PATH="$HOME/.local/bin:$PATH"
+irm https://raw.githubusercontent.com/funlearnstudio/SE/main/install.ps1 | iex
 ```
 
 Verify:
@@ -97,42 +31,45 @@ se --version
 se doctor
 ```
 
-To make the PATH change permanent, add this line to `~/.zshrc` or `~/.bashrc`:
+The installer detects your platform, downloads the matching package from GitHub Releases, installs it into your user account, and makes the `se` command available through your user `PATH`.
+
+### What does not require a compiler?
+
+These commands work with the prebuilt SE package and do not require CMake or a C++ compiler:
 
 ```bash
-export PATH="$HOME/.local/bin:$PATH"
+se
+se run hello.se
+se check hello.se
+se check-all .
+se test .
+se new app myapp
+se new web mysite
 ```
 
-For zsh, reload it with:
+### Native build exception
+
+`se build` currently uses SE's C++20 backend and invokes a system C++ compiler to produce a standalone native executable:
 
 ```bash
-source ~/.zshrc
+se build hello.se
 ```
 
-For bash:
+Therefore `se build` still requires a C++20 compiler. This is separate from installing and running SE itself. CMake is not required for normal installed use.
 
-```bash
-source ~/.bashrc
-```
+### Direct downloads
 
-### 7. Install on Windows
+GitHub Releases publishes:
 
-From a Visual Studio / MSVC terminal:
+- `se-0.6.0-macos-arm64.tar.gz` for Apple Silicon Macs
+- `se-0.6.0-macos-x64.tar.gz` for Intel Macs
+- `se-0.6.0-linux-x64.tar.gz` for Linux x64
+- `se-0.6.0-windows-x64.zip` for Windows x64
+- `SHA256SUMS.txt` for checksum verification
 
-```powershell
-cmake --install build --config Release --prefix "$env:USERPROFILE\.local"
-```
+### First SE program
 
-The executable will be installed under the selected prefix. Add its `bin` directory to the Windows `PATH`, then open a new terminal and run:
-
-```powershell
-se --version
-se doctor
-```
-
-### 8. First SE program
-
-Create a file named `hello.se`:
+Create `hello.se`:
 
 ```se
 say "Hello SE"
@@ -144,190 +81,126 @@ Run it:
 se run hello.se
 ```
 
-Static-check it:
+### Update SE
+
+Running the installer again replaces the installed copy of the same version. Future installers can also select another release with `SE_VERSION`.
+
+macOS / Linux example:
 
 ```bash
-se check hello.se
+SE_VERSION=0.6.0 curl -fsSL https://raw.githubusercontent.com/funlearnstudio/SE/main/install.sh | sh
 ```
 
-Build a native executable:
+On Windows, set `$env:SE_VERSION` before running `install.ps1` when installing a specific supported release.
+
+### Build SE itself from source
+
+Contributors who want to build the SE implementation need:
+
+- Git
+- CMake 3.20+
+- a C++20 compiler
 
 ```bash
-se build hello.se
-```
-
-### 9. Update SE later
-
-Inside your SE source directory:
-
-```bash
-git checkout main
-git pull
-rm -rf build
+git clone https://github.com/funlearnstudio/SE.git
+cd SE
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
-cmake --install build --prefix "$HOME/.local"
 ```
 
-On Windows, use the corresponding Release multi-config commands instead of the Unix commands above.
+Windows uses the equivalent Release multi-config CMake commands.
 
-### 10. Troubleshooting
-
-If `se` is not found after installation, check that your install `bin` directory is in `PATH`.
+### Troubleshooting
 
 macOS / Linux:
 
 ```bash
-echo "$PATH"
 which se
+se --version
+```
+
+If `$HOME/.local/bin` is not in `PATH`, add this to `~/.zshrc` or `~/.bashrc`:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
 Windows PowerShell:
 
 ```powershell
-$env:PATH
 Get-Command se
+se --version
 ```
 
-If configuration fails, verify CMake and your compiler:
+The Windows installer adds its user-level SE bin directory to `PATH`; open a new terminal if the current terminal does not see it yet.
 
-```bash
-cmake --version
-c++ --version
-```
-
-If HTTPS calls fail, verify that `curl` is installed and available:
-
-```bash
-curl --version
-```
+The SE HTTPS module currently uses system `curl`, so HTTPS features require `curl` even though the SE interpreter itself does not.
 
 ---
 
 ## 中文
 
-### 1. 安裝需求
-
-請先準備：
-
-- Git
-- CMake 3.20 以上
-- 支援 C++20 的編譯器
-- 如果要使用 SE 的 HTTPS 模組，需要 `curl`
-
-常見環境：
-
-- macOS：Xcode Command Line Tools 提供的 Apple Clang
-- Linux：支援 C++20 的 GCC 或 Clang
-- Windows：Visual Studio 2022 / MSVC，並安裝 C++ Desktop Development 工具
-
-### 2. 下載 SE
-
-```bash
-git clone https://github.com/funlearnstudio/SE.git
-cd SE
-```
-
-### 3. 設定編譯環境
+### 快速安裝
 
 macOS / Linux：
 
 ```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+curl -fsSL https://raw.githubusercontent.com/funlearnstudio/SE/main/install.sh | sh
 ```
 
-Windows：
+Windows PowerShell：
 
 ```powershell
-cmake -S . -B build
+irm https://raw.githubusercontent.com/funlearnstudio/SE/main/install.ps1 | iex
 ```
 
-### 4. 編譯
-
-macOS / Linux：
-
-```bash
-cmake --build build --parallel
-```
-
-Windows：
-
-```powershell
-cmake --build build --config Release
-```
-
-### 5. 執行測試
-
-macOS / Linux：
-
-```bash
-ctest --test-dir build --output-on-failure
-```
-
-Windows：
-
-```powershell
-ctest --test-dir build -C Release --output-on-failure
-```
-
-建議在正式安裝前先跑測試，確認你電腦上的編譯器與 SE Runtime 可以正常工作。
-
-### 6. macOS / Linux 安裝
-
-安裝到自己的使用者目錄：
-
-```bash
-cmake --install build --prefix "$HOME/.local"
-```
-
-讓目前這個 Terminal 可以找到 `se`：
-
-```bash
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-確認是否安裝成功：
+安裝完成後：
 
 ```bash
 se --version
 se doctor
 ```
 
-如果希望重新打開 Terminal 之後仍可以使用 `se`，把下面這行加入 `~/.zshrc` 或 `~/.bashrc`：
+安裝器會自動偵測作業系統與 CPU 架構，從 GitHub Releases 下載正確的預編譯 SE，安裝到使用者目錄，並讓 `se` 指令可以直接使用。
+
+### 哪些功能完全不需要 C++ / CMake？
+
+一般使用 SE 時，以下功能都直接由下載好的 SE 執行，不需要 CMake，也不需要 C++ 編譯器：
 
 ```bash
-export PATH="$HOME/.local/bin:$PATH"
+se
+se run hello.se
+se check hello.se
+se check-all .
+se test .
+se new app myapp
+se new web mysite
 ```
 
-使用 zsh 時重新載入：
+所以初學者下載 SE 之後，就可以直接開始寫 `.se` 程式。
+
+### `se build` 是目前唯一的例外
+
+目前 `se build` 會經過 SE 的 C++20 Backend，再呼叫系統 C++ 編譯器產生真正的 Native Executable：
 
 ```bash
-source ~/.zshrc
+se build hello.se
 ```
 
-使用 bash：
+因此如果要使用 `se build`，目前仍需要 C++20 編譯器。這不影響 SE 本身的安裝、REPL、執行、檢查或測試；一般使用完全不需要先安裝 C++ 或 CMake。
 
-```bash
-source ~/.bashrc
-```
+### 可以直接下載的版本
 
-### 7. Windows 安裝
+GitHub Releases 會提供：
 
-在 Visual Studio / MSVC Terminal 中執行：
+- `se-0.6.0-macos-arm64.tar.gz`：Apple Silicon Mac
+- `se-0.6.0-macos-x64.tar.gz`：Intel Mac
+- `se-0.6.0-linux-x64.tar.gz`：Linux x64
+- `se-0.6.0-windows-x64.zip`：Windows x64
+- `SHA256SUMS.txt`：SHA-256 檢查碼
 
-```powershell
-cmake --install build --config Release --prefix "$env:USERPROFILE\.local"
-```
-
-安裝完成後，把安裝位置中的 `bin` 資料夾加入 Windows `PATH`，重新開啟 Terminal，再執行：
-
-```powershell
-se --version
-se doctor
-```
-
-### 8. 第一個 SE 程式
+### 第一個 SE 程式
 
 建立 `hello.se`：
 
@@ -335,76 +208,60 @@ se doctor
 say "Hello SE"
 ```
 
-直接執行：
+執行：
 
 ```bash
 se run hello.se
 ```
 
-只做靜態檢查：
+檢查：
 
 ```bash
 se check hello.se
 ```
 
-編譯成 Native executable：
+### 更新 SE
+
+之後可以再次執行安裝器來更新或重新安裝。安裝器也支援用 `SE_VERSION` 指定版本。
+
+### 如果你要開發 SE 本身
+
+只有要修改、編譯 SE Compiler / Runtime 本身的人才需要：
+
+- Git
+- CMake 3.20+
+- C++20 編譯器
 
 ```bash
-se build hello.se
-```
-
-### 9. 之後更新 SE
-
-進入 SE 原始碼資料夾：
-
-```bash
-git checkout main
-git pull
-rm -rf build
+git clone https://github.com/funlearnstudio/SE.git
+cd SE
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
-cmake --install build --prefix "$HOME/.local"
 ```
 
-Windows 則使用前面對應的 Release multi-config 指令。
+### 常見問題
 
-### 10. 常見問題
-
-如果安裝完成後出現 `se: command not found`，通常是安裝位置的 `bin` 還沒有加入 `PATH`。
-
-macOS / Linux 可檢查：
+macOS / Linux：
 
 ```bash
-echo "$PATH"
 which se
+se --version
 ```
 
-Windows PowerShell：
-
-```powershell
-$env:PATH
-Get-Command se
-```
-
-如果 CMake 設定失敗，先確認版本與編譯器：
+如果 `$HOME/.local/bin` 不在 `PATH`，將下面這行加入 `~/.zshrc` 或 `~/.bashrc`：
 
 ```bash
-cmake --version
-c++ --version
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
-如果 HTTPS 功能不能使用，確認系統有 `curl`：
+Windows 安裝器會把 SE 的使用者級 `bin` 目錄加入 `PATH`；如果目前的 Terminal 還找不到 `se`，重新開一個 Terminal 即可。
 
-```bash
-curl --version
-```
+SE 的 HTTPS 模組目前仍使用系統 `curl`，所以只有使用 HTTPS 功能時需要 `curl`；SE Interpreter 本身不依賴它。
 
 ---
 
 ## Next steps / 下一步
-
-After installation / 安裝完成後：
 
 ```bash
 se help
