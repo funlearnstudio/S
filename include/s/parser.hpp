@@ -13,6 +13,7 @@ private:
   const Token& peek(int offset=0) const;
   bool check(TokenKind) const; bool match(TokenKind); const Token& take(TokenKind,const std::string&);
   void line_end(); ast::StmtPtr statement(); ast::Block block();
+  ast::StmtPtr if_statement(SourcePos start);
   std::shared_ptr<ast::Function> function(SourcePos start);
   std::shared_ptr<ast::Type> type_decl(SourcePos start);
   ast::TypeRef type_ref();
