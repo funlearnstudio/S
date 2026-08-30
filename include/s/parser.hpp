@@ -15,6 +15,7 @@ private:
   void line_end(); ast::StmtPtr statement(); ast::Block block();
   std::shared_ptr<ast::Function> function(SourcePos start);
   std::shared_ptr<ast::Type> type_decl(SourcePos start);
+  ast::TypeRef type_ref();
   ast::ExprPtr expression(int min_prec=0); ast::ExprPtr prefix(); ast::ExprPtr postfix(ast::ExprPtr);
   bool expression_start(TokenKind) const; int precedence(TokenKind) const;
   std::vector<ast::ExprPtr> bracket_items(TokenKind close);
