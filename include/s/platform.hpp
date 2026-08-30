@@ -4,6 +4,7 @@
 #include "s/value.hpp"
 #include "s/advanced.hpp"
 #include "s/database.hpp"
+#include "s/ecosystem.hpp"
 #include <memory>
 #include <string>
 
@@ -15,10 +16,11 @@ TypeInfo platform_builtin_type(const std::string& name);
 std::shared_ptr<ModuleData> platform_builtin_module(const std::string& name, Interpreter& vm);
 
 inline bool combined_platform_builtin(const std::string& name){
-  return is_platform_builtin(name)||is_advanced_builtin(name);
+  return is_ecosystem_builtin(name)||is_platform_builtin(name)||is_advanced_builtin(name);
 }
 
 inline TypeInfo combined_platform_builtin_type(const std::string& name){
+  if(is_ecosystem_builtin(name)) return ecosystem_builtin_type(name);
   if(is_advanced_builtin(name)){
     auto module=advanced_builtin_type(name);
     if(name=="db") extend_database_type(module);
@@ -30,6 +32,7 @@ inline TypeInfo combined_platform_builtin_type(const std::string& name){
 }
 
 inline std::shared_ptr<ModuleData> combined_platform_builtin_module(const std::string& name,Interpreter& vm){
+  if(is_ecosystem_builtin(name)) return ecosystem_builtin_module(name,vm);
   if(is_advanced_builtin(name)){
     auto module=advanced_builtin_module(name,vm);
     if(name=="db") extend_database_module(module,vm);
