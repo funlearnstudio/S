@@ -22,3 +22,5 @@
 #undef list_type
 #undef module_type
 #undef callable
+
+#include "game_ext.cpp"
