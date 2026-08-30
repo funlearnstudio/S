@@ -1,106 +1,245 @@
-# S 0.2 language reference
+# SE Language Reference
 
-S keeps indentation blocks, no semicolons, and low-punctuation calls.
+[繁體中文版](language-reference-zh-TW.md)
 
-## Values and variables
+This reference summarizes the user-facing language model. For examples and explanation, see [Tutorial](tutorial.md). For compiler internals, see [Technical Reference](technical-reference.md).
 
-```text
-name = "Steve"
-age = 15
-score = 98.5
-ready = true
-nums = [1, 2, 3]
+## Source files and comments
+
+New source files use `.se`.
+
+```se
+# comment
+say "Hello"
 ```
 
-## Control flow
+Legacy `.s` may remain for migration compatibility.
+
+## Literals
+
+```se
+123
+3.14
+true
+false
+"text"
+[1, 2, 3]
+["name": "SE"]
+set [1, 2, 3]
+500ms
+2s
+1min
+```
+
+## Variables and assignment
+
+```se
+name = "SE"
+count = 1
+count += 1
+count -= 1
+count *= 2
+count /= 2
+count %= 3
+```
+
+Compound assignment reuses normal assignment/binary-operation semantics.
+
+## Operators
+
+Arithmetic: `+ - * / % **`
+
+Comparison: `== != > >= < <=`
+
+Logic: `and or not`
+
+Membership: `in`
+
+Range: `1..10`
+
+Approximate precedence from high to low:
 
 ```text
-if age > 10
-    say "older than ten"
+**
+unary - / not
+* / %
++ -
+..
+comparison
+== !=
+and
+or
+```
+
+`**` is right-associative.
+
+## Conditions
+
+```se
+if score >= 90
+    say "A"
+else if score >= 80
+    say "B"
 else
-    say "ten or younger"
+    say "C"
+```
 
+Some newer source revisions may also accept `elif` as an alias for `else if`; use syntax provided by the revision you built.
+
+## Loops
+
+```se
 repeat 3
-    say "S"
+    say "Hi"
 
-for n in nums
-    say n
+for item in items
+    say item
 
-while ready
-    ready = false
+for key value in map_value
+    say key
+    say value
+
+while running
+    update
 ```
 
 ## Functions
 
-```text
+```se
 make add a b
     give a + b
 
-say add 20 22
+answer = add 2 3
 ```
 
-## Types
+SE uses low-punctuation calls. Parentheses may be used where explicit grouping is needed.
 
-```text
-type Dog
+## Typed and generic functions
+
+```se
+make identity[T] value:T -> T
+    give value
+```
+
+Type annotations are optional where inference is sufficient.
+
+## User-defined types
+
+```se
+type User
     name = ""
-    age = 0
+    score = 0
 
-    make birthday
-        age = age + 1
+    make hello
+        say name
 
-dog = Dog
-    name = "Milo"
-
-dog.birthday
-say dog.age
+user = User
+    name = "SE"
 ```
 
-## Modules
-
-```text
-use player
-```
-
-Public top-level names are imported; names beginning with `_` stay module-private.
+Each object has its own field storage. Methods can resolve unshadowed fields on the current object without requiring a mandatory `self.` prefix.
 
 ## Collections
 
-```text
+```se
 list = [1, 2, 3]
-map = ["name": "Steve"]
-set_values = set [1, 2, 2, 3]
+map_value = ["name": "SE"]
+set_value = set [1, 2, 2, 3]
 
 list.add 4
-if 3 in set_values
-    say "yes"
+say map_value["name"]
+
+if 3 in set_value
+    say "found"
 ```
 
-## Errors
+## Members and indexing
 
-```text
+```se
+value.member
+list[index]
+map_value["key"]
+value.help
+```
+
+`.help` can expose basic member/help information for supported values.
+
+## Modules
+
+```se
+use path
+```
+
+Top-level names beginning with `_` follow the module-private convention. Circular imports are rejected.
+
+## Error handling
+
+```se
 try
     text = read "data.txt"
     say text
 else err
-    say err
+    say err.message
 ```
 
-`try expr` propagates a recoverable error from a function. `fail "message"` creates a user error.
+Create a runtime error:
 
-## File, path, and time
-
-```text
-use path
-use time
-
-file = path.join "data" "user.txt"
-now = time.now
-wait 500ms
+```se
+fail "message"
 ```
 
-## Native modules
+Propagate a fallible expression from a function where supported:
 
-Native bindings are selected with ordinary `use name`; `.snative` metadata describes the C ABI outside normal S programs.
+```se
+make load
+    give try read "data.txt"
+```
 
-S 0.1 syntax remains valid in S 0.2.
+## Match / case
+
+```se
+match status
+    case 200
+        say "ok"
+    case 404
+        say "not found"
+    else
+        say "other"
+```
+
+Current matching is value/equality based rather than a complete destructuring pattern system.
+
+## Async
+
+```se
+job = async.run work 21
+answer = async.await job
+```
+
+SE Web also lowers supported `async.await` expressions in browser event handlers to JavaScript `await`.
+
+## Web source
+
+```se
+make Button text
+    html
+        button text
+
+    css
+        padding 12
+
+    js
+        when click
+            say text
+
+page "/"
+    Button "Save"
+```
+
+Build with:
+
+```bash
+se web build app.se dist
+```
+
+For browser requests, routing and forms, see [Browser API](browser-api-0.8.md).
