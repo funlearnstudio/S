@@ -3,4 +3,4 @@ make Button text
         button text
 
 page "/"
-    Button
+    Button "A" "B"
