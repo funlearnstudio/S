@@ -1,0 +1,14 @@
+SE:
+  type: programming
+  color: "#6C63FF"
+  aliases:
+  - se
+  extensions:
+  - ".se"
+  interpreters:
+  - se
+  tm_scope: source.se
+  ace_mode: text
+
+# `language_id` is intentionally omitted here.
+# GitHub Linguist requires it to be generated with `script/update-ids`.

@@ -1,0 +1,29 @@
+name: Publish VS Code Extension
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        working-directory: vscode
+        run: npm install
+      - name: Validate TextMate grammar
+        run: |
+          node -e "const fs=require('fs'); const g=JSON.parse(fs.readFileSync('vscode/syntaxes/se.tmLanguage.json','utf8')); if(g.scopeName!=='source.se') process.exit(1);"
+      - name: Publish to Visual Studio Marketplace
+        working-directory: vscode
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: |
+          test -n "$VSCE_PAT" || { echo "VSCE_PAT secret is required"; exit 1; }
+          npx vsce publish -p "$VSCE_PAT"
