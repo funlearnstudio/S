@@ -1,0 +1,48 @@
+use math
+use data
+use game
+
+nums = [1, 2, 3, 4]
+data.append nums 5
+data.insert nums 0 0
+last = data.pop nums
+
+say last
+say math.factorial 5
+say math.gcd 84 30 18
+say math.mean nums
+say math.median nums
+say math.clamp 12 0 10
+
+record = ["name": "SE"]
+data.set record "version" 9
+say data.get record "name"
+say data.get record "version"
+
+scene = game.new 320 200 "SE Game"
+game.background scene "#101820"
+game.rect scene 20 20 120 60 "#4ade80" true
+game.circle scene 220 80 35 "#60a5fa" true
+game.line scene 20 150 300 150 "white" 3
+game.text scene "SE Game" 95 180 20 "white"
+
+game.sprite_color scene "player" 40 40 24 24 "#f59e0b"
+game.velocity scene "player" 25 0
+up = -8
+left = -8
+game.key_move scene "player" "ArrowUp" 0 up
+game.key_move scene "player" "ArrowDown" 0 8
+game.key_move scene "player" "ArrowLeft" left 0
+game.key_move scene "player" "ArrowRight" 8 0
+game.follow_mouse scene "player"
+game.camera scene 0 0
+game.particles scene 160 100 12 "#ffffff" 40
+game.fullscreen scene
+game.animate scene 60
+
+hit = game.rect_hit 0 0 20 20 10 10 20 20
+say hit
+say game.distance 0 0 3 4
+
+markup = game.html scene
+say markup.len
