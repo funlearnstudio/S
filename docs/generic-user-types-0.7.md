@@ -1,6 +1,8 @@
 # SE 0.7 Generic User Types
 
-SE 0.7 extends the type-depth foundation with generic user-defined types while keeping the ordinary `type` model small.
+[繁體中文版](generic-user-types-0.7-zh-TW.md)
+
+This versioned document describes the generic user-type stage built on Structured TypeRef. It is separate from the stable 0.6 generic-function reference.
 
 ## Basic syntax
 
@@ -12,7 +14,7 @@ box = Box[Int]
     value = 42
 ```
 
-`Box[Int]` specializes `T` as `Int`, so `value` is statically `Int`.
+`Box[Int]` specializes `T` as `Int`, so `value` is statically checked as `Int`.
 
 ## Multiple type parameters
 
@@ -30,33 +32,33 @@ Type argument arity is checked statically.
 
 ## Typed and required fields
 
-Existing default-value fields remain valid:
+Existing default fields remain valid:
 
 ```se
 type User
     name = ""
 ```
 
-Explicit annotations may be combined with defaults:
+Explicit typed fields can use defaults:
 
 ```se
 type User
     name:Text = ""
 ```
 
-A typed field without a default is required during indented initialization:
+A typed field without a default is required during object initialization:
 
 ```se
 type User
     name:Text
+    age:Int
 
 user = User
     name = "Milo"
+    age = 15
 ```
 
-## Generic methods
-
-An enclosing type parameter is available to methods:
+## Methods and type parameters
 
 ```se
 type Box[T]
@@ -71,32 +73,32 @@ type Box[T]
 
 For `Box[Int]`, `get` returns `Int` and `replace` accepts `Int`.
 
-## Generic functions over user types
+## Generic functions over generic user types
 
 ```se
 make unwrap[T] box:Box[T] -> T
     give box.value
 ```
 
-Passing a `Box[Int]` binds `T` to `Int`, including the return type.
+Passing `Box[Int]` binds `T` to `Int`, including the return type.
 
 ## Nested specialization
 
-User types may contain specialized user types:
+Generic substitution can continue through nested user/collection types:
 
 ```se
 type Wrapper[T]
     item:Box[T]
 ```
 
-Substitution also continues recursively through List, Set, and Map types.
+## Runtime model
 
-## Compatibility and runtime model
+This stage uses runtime erasure for type parameters: specializations share the runtime type representation while the static checker preserves and enforces specialization information.
 
-Existing non-generic SE 0.6 user types remain source-compatible. Generic type construction uses PascalCase type names such as `Box[Int]`, which also keeps generic type application distinguishable from normal collection indexing.
+## Compatibility
 
-Generic user types are runtime-erased in this phase. `Box[Int]` and `Box[Text]` share the same runtime `TypeData`; their specialization is retained and enforced by the static checker.
+Non-generic user types, default fields, methods and ordinary initialization remain valid. Generic type application uses forms such as `Box[Int]`, keeping type specialization visually distinct from ordinary value indexing.
 
-## Current boundary
+## Current boundaries
 
-This phase implements invariant generic user types and specialization. It does not yet add traits/interfaces, variance, generic constraints, higher-kinded types, or specialization overloading.
+This stage covers invariant generic user types and specialization. Traits/interfaces, variance, generic constraints, higher-kinded types and specialization overloading are not implied unless a later implementation explicitly provides them.
