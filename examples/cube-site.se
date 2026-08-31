@@ -1,0 +1,162 @@
+# Cube Atlas — a multi-page Rubik's Cube website written in SE.
+# Build with: se web build examples/cube-site.se dist/cube-site
+
+make Nav
+    html
+        native "<nav class=nav><a href=\"/\">首頁</a><a href=\"/basics\">基本介紹</a><a href=\"/history\">歷史</a><a href=\"/notation\">公式與符號</a><a href=\"/speedcubing\">競速魔方</a></nav>"
+
+    css
+        display flex
+        gap 18
+        padding 16
+        margin_bottom 28
+        background "rgba(255,255,255,0.72)"
+        border_radius 16
+        box_shadow "0 8px 30px rgba(0,0,0,0.08)"
+
+make CubeVisual
+    html
+        native "<div class=\"cube\" aria-label=\"3x3 Rubik's Cube illustration\"><div class=\"face top\"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class=\"face front\"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class=\"face right\"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>"
+
+    css
+        display block
+        width 260
+        height 260
+        margin 20
+
+        .cube
+            position relative
+            width 180
+            height 180
+            transform rotate(-28deg) skewY(10deg)
+
+        .face
+            position absolute
+            display grid
+            grid_template_columns "repeat(3, 1fr)"
+            gap 4
+            padding 6
+            border_radius 10
+            background "#111"
+
+        .face i
+            display block
+            min_width 42
+            min_height 42
+            border_radius 5
+            background "#f7f7f7"
+
+        .top
+            left 24
+            top 0
+            transform skewX(-32deg)
+            background "#111"
+
+        .front
+            left 0
+            top 72
+            background "#111"
+
+        .right
+            left 156
+            top 72
+            transform skewY(-34deg)
+            background "#111"
+
+        .top i
+            background "#fff"
+
+        .front i
+            background "#f32f2f"
+
+        .right i
+            background "#ff9f0a"
+
+make Hero title subtitle
+    html
+        section
+            h1 title
+            p subtitle
+
+    css
+        padding 44
+        border_radius 24
+        background "linear-gradient(135deg, #111827, #243b64)"
+        color "white"
+        margin_bottom 24
+
+        h1
+            font_size 42
+            margin_bottom 10
+
+        p
+            font_size 18
+            opacity 0.86
+
+make Card title text
+    html
+        article
+            h2 title
+            p text
+
+    css
+        padding 24
+        border_radius 18
+        background "white"
+        box_shadow "0 8px 30px rgba(0,0,0,0.06)"
+        margin_bottom 16
+
+make Layout
+    css
+        max_width 980
+        margin "0 auto"
+        padding 28
+        font_family "system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
+        color "#172033"
+        line_height 1.7
+        background "#f5f7fb"
+
+page "/"
+    Layout
+    Nav
+    Hero "魔方世界" "從第一顆 3×3 到競速解法，一次認識 Rubik's Cube。"
+    CubeVisual
+    Card "什麼是魔方？" "魔方是一種立方體益智玩具。最經典的 3×3×3 魔方有六個面，每個面由 9 個小方塊組成。透過旋轉不同的層，可以把打亂的顏色重新排列成六面同色。"
+    Card "為什麼值得學？" "魔方不只是背公式。你會接觸空間想像、模式辨識、問題拆解與演算法思維。從一個面開始，到能獨立理解完整解法，是很有成就感的學習過程。"
+    Card "網站導覽" "前往基本介紹了解結構；閱讀歷史認識魔方的發展；到公式與符號學會閱讀轉法；最後看看競速魔方如何把解題速度提升到極致。"
+
+page "/basics"
+    Layout
+    Nav
+    Hero "魔方基本介紹" "先認識結構，再開始學解法。"
+    Card "3×3×3 的結構" "3×3 魔方可以從三種主要零件理解：中心塊、棱塊與角塊。中心塊決定每一面的顏色方向；棱塊位於兩種顏色的交界；角塊則同時帶有三種顏色。"
+    Card "六個面" "常用英文名稱為 U（Up 上）、D（Down 下）、L（Left 左）、R（Right 右）、F（Front 前）、B（Back 後）。不同教材可能使用不同的中文名稱，因此熟悉字母記號很重要。"
+    Card "解魔方的核心" "常見初學者方法會把問題拆成幾個階段，例如先完成底層、處理中層，再完成最後一層。進階方法則會進一步利用更系統化的 case 與演算法。"
+    Card "不要只看顏色" "學習時真正重要的是零件的位置與方向。看到一個角塊時，可以同時觀察它屬於哪三個中心顏色，這能幫助你理解它應該回到哪裡。"
+
+page "/history"
+    Layout
+    Nav
+    Hero "魔方歷史" "從機械謎題，到全球流行的競速運動。"
+    Card "1974：Ernő Rubik" "匈牙利建築學教授 Ernő Rubik 在 1974 年發明了後來成為 Rubik's Cube 的立方體機械謎題。最初的設計也與研究空間結構有關。"
+    Card "1980 年代" "魔方迅速成為全球流行的益智玩具。大量書籍、教學與比賽文化也逐漸出現，讓魔方從玩具變成了一種可以研究與交流的技術。"
+    Card "競速時代" "隨著計時器、比賽規則與高速魔方結構進步，speedcubing 逐漸形成完整社群。選手不只追求更快，也會研究更有效率的演算法、手法與器材。"
+    Card "今天" "現在除了 3×3，還有 2×2、4×4、5×5、金字塔、斜轉、Square-1 等許多項目。魔方也常被用來學習演算法、空間推理與競賽策略。"
+
+page "/notation"
+    Layout
+    Nav
+    Hero "公式與符號" "看懂記號，才能開始閱讀魔方公式。"
+    Card "基本轉法" "R 代表右面順時針轉 90 度；R' 代表右面逆時針轉 90 度；R2 代表右面轉 180 度。U、D、L、F、B 也使用同樣規則。"
+    Card "為什麼需要符號？" "如果只用「把右邊往上轉」描述公式，視角一變就容易混亂。標準化記號讓不同地區的玩家可以用同一種語言交流演算法。"
+    Card "閱讀範例" "例如 R U R' U' 是非常常見的四步轉法。閱讀時從左到右依序執行，每一個字母都是一次面轉動。"
+    Card "進一步" "進階公式還可能使用寬轉、整體轉動與其他記號。剛開始不需要一次記完，先熟悉 U D L R F B 和撇號、2 就足夠。"
+
+page "/speedcubing"
+    Layout
+    Nav
+    Hero "競速魔方" "把解題變成精準、快速而穩定的流程。"
+    Card "什麼是 Speedcubing？" "Speedcubing 是以時間衡量解題表現的魔方競速活動。除了單次成績，也常使用多次平均成績，降低單次失誤或幸運打亂造成的影響。"
+    Card "CFOP" "3×3 競速中很常見的一套方法是 CFOP：Cross、F2L、OLL、PLL。它把完整解題流程拆成十字、前兩層、最後一層方向與最後一層排列。"
+    Card "速度從哪裡來？" "高速不只是手轉得快。選手需要降低停頓、提前觀察下一步、熟悉公式、控制手指動作，並讓每一次轉動都穩定可靠。"
+    Card "練習建議" "先追求理解與穩定，再追求速度。可以記錄每次練習的時間，觀察平均值與容易卡住的階段，然後針對問題練習。"
